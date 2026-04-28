@@ -839,16 +839,27 @@ function googleSignIn(){
 }
 
 function checkOauthReturn(){
+  // Check URL hash for fresh token (OAuth redirect just landed)
   const hash=window.location.hash;
-  if(!hash)return;
-  const p=new URLSearchParams(hash.slice(1));
-  const tok=p.get('access_token');
-  if(tok){
-    S.token=tok;
-    sessionStorage.removeItem('prism_oauth');
-    history.replaceState(null,'',window.location.pathname);
-    goTab('cloud');
-    toast('✓ Connected to Google Photos');
+  if(hash){
+    const p=new URLSearchParams(hash.slice(1));
+    const tok=p.get('access_token');
+    if(tok){
+      S.token=tok;
+      const exp=parseInt(p.get('expires_in')||'3600');
+      localStorage.setItem('prism_token',tok);
+      localStorage.setItem('prism_token_exp',Date.now()+exp*1000);
+      history.replaceState(null,'',window.location.pathname);
+      goTab('cloud');
+      toast('✓ Connected to Google Photos');
+      return;
+    }
+  }
+  // Check localStorage for a saved token (PWA opened fresh after redirect)
+  const saved=localStorage.getItem('prism_token');
+  const exp=localStorage.getItem('prism_token_exp');
+  if(saved&&exp&&Date.now()<parseInt(exp)){
+    S.token=saved;
   }
 }
 
