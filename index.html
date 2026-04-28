@@ -840,7 +840,7 @@ function googleSignIn(){
 
 function checkOauthReturn(){
   const hash=window.location.hash;
-  if(!hash||!sessionStorage.getItem('prism_oauth'))return;
+  if(!hash)return;
   const p=new URLSearchParams(hash.slice(1));
   const tok=p.get('access_token');
   if(tok){
