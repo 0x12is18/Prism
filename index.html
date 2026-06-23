@@ -293,6 +293,43 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
 .legend{display:flex;gap:14px;padding:6px 14px;flex-shrink:0}
 .leg{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--dim)}
 .leg-dot{width:8px;height:8px;border-radius:50%}
+
+/* ── Audio Analysis ──────────────────────────────────────────────── */
+#view-audio{position:relative}
+.audio-content{flex:1;display:flex;flex-direction:column;overflow:hidden;min-height:0}
+#audio-list{flex:1;overflow-y:auto;padding:10px;display:flex;flex-direction:column;gap:8px;-webkit-overflow-scrolling:touch}
+#audio-list::-webkit-scrollbar{width:2px}
+#audio-list::-webkit-scrollbar-thumb{background:var(--border)}
+.track-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--r);overflow:hidden}
+.track-hdr{display:flex;align-items:center;gap:8px;padding:10px 12px}
+.track-ico{font-size:16px;flex-shrink:0;line-height:1}
+.track-info{flex:1;min-width:0}
+.track-name{font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.track-meta{font-size:11px;color:var(--dim);margin-top:1px}
+.track-close{background:none;border:none;color:var(--dim);font-size:15px;cursor:pointer;padding:4px 6px;border-radius:6px;flex-shrink:0;font-family:var(--font)}
+.track-close:active{color:var(--text);background:var(--bg3)}
+.waveform-wrap{padding:6px 12px 0;border-top:1px solid var(--border)}
+.waveform{width:100%;height:42px;display:block;border-radius:4px}
+.track-status{display:flex;align-items:center;gap:8px;padding:10px 12px;font-size:12px;color:var(--dim);border-top:1px solid var(--border)}
+.track-err{padding:8px 12px;font-size:12px;color:#ff6b6b;background:rgba(255,107,107,.07);border-top:1px solid rgba(255,107,107,.12)}
+.track-body{padding:10px 12px;display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--border)}
+.t-section{display:flex;flex-direction:column;gap:4px}
+.t-lbl{font-size:10px;font-weight:700;letter-spacing:.8px;color:var(--accent);text-transform:uppercase}
+.t-txt{font-size:12px;color:var(--text);line-height:1.65;white-space:pre-wrap;word-break:break-word}
+.t-tags{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}
+.abadge{padding:3px 8px;border-radius:10px;font-size:11px;font-weight:600;background:var(--bg3);border:1px solid var(--border);color:var(--dim)}
+.abadge.mood{background:rgba(139,127,255,.15);border-color:rgba(139,127,255,.3);color:var(--accent)}
+.abadge.inst{background:rgba(255,126,179,.12);border-color:rgba(255,126,179,.25);color:var(--accent2)}
+.abadge.genre{background:rgba(103,212,248,.1);border-color:rgba(103,212,248,.25);color:var(--cloud)}
+.freq-bars{display:flex;align-items:flex-end;gap:2px;height:28px;margin-top:5px}
+.fb{flex:1;border-radius:2px 2px 0 0;min-height:3px}
+.fb.bass{background:var(--accent);opacity:.8}
+.fb.mid{background:var(--accent2);opacity:.8}
+.fb.hi{background:var(--cloud);opacity:.8}
+.key-warn{margin:8px 10px 0;padding:8px 11px;background:rgba(255,183,0,.07);border:1px solid rgba(255,183,0,.18);border-radius:8px;font-size:11px;color:#d4a200;line-height:1.5}
+.key-warn button{background:none;border:none;color:#d4a200;text-decoration:underline;cursor:pointer;font-family:var(--font);font-size:11px;padding:0}
+#audio-setup{flex:1;overflow-y:auto;padding:16px;display:none;flex-direction:column;gap:12px;-webkit-overflow-scrolling:touch}
+#audio-setup.on{display:flex}
 </style>
 </head>
 <body>
@@ -317,6 +354,9 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
     </button>
     <button class="tab" data-v="all" onclick="goTab('all')">
       <span class="ti">✦</span> All
+    </button>
+    <button class="tab" data-v="audio" onclick="goTab('audio')">
+      <span class="ti">♪</span> Audio
     </button>
   </div>
 
@@ -418,6 +458,48 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--text);fon
       </div>
     </div>
 
+    <!-- ── AUDIO VIEW ─────────────────────────────────────── -->
+    <div class="view" id="view-audio">
+      <div class="audio-content" id="audio-content">
+        <div class="act-strip">
+          <label class="add-btn">
+            ♪ Add MP3
+            <input id="afi" type="file" accept="audio/mpeg,audio/mp3,audio/*" multiple style="display:none" onchange="onAudioInput(this)">
+          </label>
+          <span class="mini-stat" id="audio-stat"></span>
+          <button class="icon-btn" title="API Keys" onclick="openAudioSetup()" style="margin-left:auto">⚙</button>
+        </div>
+        <div id="audio-list">
+          <div class="empty">
+            <div class="empty-ico">🎵</div>
+            <div class="empty-ttl">No tracks analyzed yet</div>
+            <div class="empty-txt">Tap <strong>♪ Add MP3</strong> to upload an audio file. Prism will transcribe lyrics and analyze mood &amp; instrumentation.</div>
+          </div>
+        </div>
+      </div>
+      <!-- Audio API key setup -->
+      <div id="audio-setup">
+        <div class="setup-ttl">Audio Analysis Setup</div>
+        <p class="setup-sub">API keys are stored only in your browser's localStorage — they never leave your device. Both are optional: omit one to skip that step.</p>
+        <div class="step">
+          <div class="step-num">1</div>
+          <h3>OpenAI API Key — Lyrics Transcription</h3>
+          <p>Uses Whisper to transcribe spoken lyrics. Get a key at <a href="https://platform.openai.com/api-keys" target="_blank">platform.openai.com/api-keys</a>. Files must be under 25 MB. Charges ≈ $0.006 / min.</p>
+          <input class="txt-in" id="oai-key-in" type="password" placeholder="sk-…" autocomplete="off">
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <h3>Anthropic API Key — Mood &amp; Instrumentation</h3>
+          <p>Uses Claude to infer instruments, mood, and genre from audio features and lyrics. Get a key at <a href="https://console.anthropic.com/settings/keys" target="_blank">console.anthropic.com</a>.</p>
+          <input class="txt-in" id="cla-key-in" type="password" placeholder="sk-ant-…" autocomplete="off">
+        </div>
+        <div class="setup-actions">
+          <button class="btn btn-pri" onclick="saveAudioKeys()">Save Keys</button>
+          <button class="btn btn-out" onclick="closeAudioSetup()">Cancel</button>
+        </div>
+      </div>
+    </div>
+
   </div><!-- /main -->
 </div><!-- /app -->
 
@@ -481,6 +563,9 @@ const S={
   token:null,
   clientId:localStorage.getItem('prism_cid')||'',
   gridCols:3,
+  audioTracks:[],    // analyzed audio track objects
+  openaiKey:localStorage.getItem('prism_oai')||'',
+  claudeKey:localStorage.getItem('prism_cla')||'',
 };
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -492,6 +577,7 @@ function goTab(t){
   document.querySelectorAll('.view').forEach(el=>el.classList.toggle('on',el.id==='view-'+t));
   if(t==='cloud'){closeSetup();renderCloud();}
   if(t==='all')renderAllGrid();
+  if(t==='audio')renderAudioList();
 }
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -926,6 +1012,413 @@ function toast(msg,ms=2800){
 // UTIL
 // ────────────────────────────────────────────────────────────────────────────
 function escH(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+
+// ────────────────────────────────────────────────────────────────────────────
+// AUDIO — SETUP
+// ────────────────────────────────────────────────────────────────────────────
+function openAudioSetup(){
+  goTab('audio');
+  document.getElementById('audio-setup').classList.add('on');
+  document.getElementById('audio-content').style.display='none';
+  const ok=document.getElementById('oai-key-in');
+  const ck=document.getElementById('cla-key-in');
+  if(ok)ok.value=S.openaiKey;
+  if(ck)ck.value=S.claudeKey;
+}
+
+function closeAudioSetup(){
+  document.getElementById('audio-setup').classList.remove('on');
+  document.getElementById('audio-content').style.display='';
+}
+
+function saveAudioKeys(){
+  const ok=(document.getElementById('oai-key-in')||{}).value?.trim();
+  const ck=(document.getElementById('cla-key-in')||{}).value?.trim();
+  if(ok!==undefined){S.openaiKey=ok;localStorage.setItem('prism_oai',ok);}
+  if(ck!==undefined){S.claudeKey=ck;localStorage.setItem('prism_cla',ck);}
+  closeAudioSetup();
+  toast('✓ API keys saved');
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// AUDIO — FILE INPUT
+// ────────────────────────────────────────────────────────────────────────────
+function onAudioInput(inp){
+  const files=Array.from(inp.files).filter(f=>
+    f.type.startsWith('audio/')||/\.(mp3|wav|m4a|ogg|flac|aac)$/i.test(f.name)
+  );
+  if(!files.length){toast('No audio files found');inp.value='';return;}
+  toast(`Loading ${files.length} track${files.length>1?'s':''}…`);
+  for(const f of files){
+    const id='a'+Math.random().toString(36).slice(2);
+    const track={
+      id,name:f.name,file:f,size:f.size,
+      duration:0,bpm:0,buffer:null,
+      features:null,transcript:null,analysis:null,
+      status:'loading',error:''
+    };
+    S.audioTracks.unshift(track);
+    renderAudioList();
+    analyzeTrack(track);
+  }
+  inp.value='';
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// AUDIO — MAIN ANALYSIS PIPELINE
+// ────────────────────────────────────────────────────────────────────────────
+async function analyzeTrack(track){
+  try{
+    // 1. Decode audio
+    const ab=await track.file.arrayBuffer();
+    const actx=new AudioContext();
+    let buffer;
+    try{buffer=await actx.decodeAudioData(ab);}
+    finally{actx.close();}
+
+    track.duration=buffer.duration;
+    track.buffer=buffer;
+    track.status='extracting';
+    renderAudioList();
+
+    // 2. Extract audio features (sync, CPU-only)
+    track.features=extractAudioFeatures(buffer);
+    track.bpm=track.features.bpm;
+
+    // 3. Whisper transcription
+    if(S.openaiKey&&track.file.size<25*1024*1024){
+      track.status='transcribing';
+      renderAudioList();
+      try{track.transcript=await transcribeLyrics(track.file,S.openaiKey);}
+      catch(e){track.transcript=null;console.warn('Whisper:',e.message);}
+    }
+
+    // 4. Claude mood & instrumentation
+    if(S.claudeKey){
+      track.status='analyzing';
+      renderAudioList();
+      try{track.analysis=await analyzeWithClaude(track.features,track.transcript,S.claudeKey);}
+      catch(e){console.warn('Claude:',e.message);}
+    }
+
+    track.status='done';
+  }catch(e){
+    console.error(e);
+    track.status='error';
+    track.error=e.message||'Unknown error';
+  }
+  renderAudioList();
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// AUDIO — FEATURE EXTRACTION (Web Audio API)
+// ────────────────────────────────────────────────────────────────────────────
+function extractAudioFeatures(buffer){
+  const data=buffer.getChannelData(0);
+  const sr=buffer.sampleRate;
+  const N=data.length;
+
+  // Energy envelope (hop = 512 samples)
+  const hop=512;
+  const energies=[];
+  for(let i=0;i<N-hop;i+=hop){
+    let e=0;
+    for(let j=0;j<hop;j++)e+=data[i+j]**2;
+    energies.push(Math.sqrt(e/hop));
+  }
+  const rms=Math.sqrt(energies.reduce((a,b)=>a+b*b,0)/energies.length);
+
+  // Zero-crossing rate (sampled) — proxy for high-freq content
+  const step=Math.max(1,Math.floor(N/80000));
+  let crosses=0,total=0;
+  for(let i=step;i<N;i+=step){
+    if((data[i]>=0)!==(data[i-step]>=0))crosses++;
+    total++;
+  }
+  const brightness=Math.round(crosses/total*100);
+
+  // 3-band energy split using first-order IIR EMA filters
+  // αB ≈ cutoff 250 Hz; αM ≈ cutoff 4 kHz
+  const alphaB=1-Math.exp(-2*Math.PI*250/sr);
+  const alphaM=1-Math.exp(-2*Math.PI*4000/sr);
+  let prevB=0,prevM=0;
+  let eBass=0,eMid=0,eHi=0,eTotal=0;
+  const sk=Math.max(1,Math.floor(N/200000)); // process at most 200k points
+  for(let i=0;i<N;i+=sk){
+    const v=data[i];
+    prevB+=alphaB*(v-prevB);
+    prevM+=alphaM*(v-prevM);
+    const bass=prevB;
+    const mid=prevM-prevB;
+    const hi=v-prevM;
+    eBass+=bass*bass;eMid+=mid*mid;eHi+=hi*hi;eTotal+=v*v;
+  }
+  const eSum=eBass+eMid+eHi||1;
+  const bassRatio=Math.round(eBass/eSum*100);
+  const midRatio=Math.round(eMid/eSum*100);
+  const trebleRatio=Math.round(eHi/eSum*100);
+
+  return{
+    duration:buffer.duration,
+    sampleRate:sr,
+    channels:buffer.numberOfChannels,
+    rms:Math.round(rms*1000)/1000,
+    bpm:estimateBPM(energies,sr/hop),
+    bassRatio,midRatio,trebleRatio,brightness,
+  };
+}
+
+function estimateBPM(energies,energySR){
+  const n=Math.min(energies.length,Math.floor(energySR*30));
+  if(n<4)return 0;
+  const slice=energies.slice(0,n);
+  const mean=slice.reduce((a,b)=>a+b,0)/n;
+  const norm=slice.map(e=>e-mean);
+  const minLag=Math.max(1,Math.floor(energySR*60/180));
+  const maxLag=Math.min(norm.length-1,Math.floor(energySR*60/60));
+  let bestLag=minLag,bestCorr=-Infinity;
+  for(let lag=minLag;lag<=maxLag;lag++){
+    let corr=0;
+    for(let i=0;i<norm.length-lag;i++)corr+=norm[i]*norm[i+lag];
+    if(corr>bestCorr){bestCorr=corr;bestLag=lag;}
+  }
+  return Math.round(energySR*60/bestLag);
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// AUDIO — WHISPER TRANSCRIPTION
+// ────────────────────────────────────────────────────────────────────────────
+async function transcribeLyrics(file,key){
+  const fd=new FormData();
+  fd.append('file',file);
+  fd.append('model','whisper-1');
+  fd.append('response_format','text');
+  const r=await fetch('https://api.openai.com/v1/audio/transcriptions',{
+    method:'POST',
+    headers:{Authorization:'Bearer '+key},
+    body:fd,
+  });
+  if(!r.ok){
+    const err=await r.json().catch(()=>({}));
+    throw new Error(err.error?.message||'Whisper HTTP '+r.status);
+  }
+  return(await r.text()).trim();
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// AUDIO — CLAUDE ANALYSIS
+// ────────────────────────────────────────────────────────────────────────────
+async function analyzeWithClaude(features,transcript,key){
+  const fmtDur=d=>{const m=Math.floor(d/60),s=Math.round(d%60);return`${m}:${s.toString().padStart(2,'0')}`;};
+  const featText=[
+    `Duration: ${fmtDur(features.duration)}`,
+    `Estimated BPM: ~${features.bpm}`,
+    `Frequency energy — Bass: ${features.bassRatio}%, Mid: ${features.midRatio}%, Treble: ${features.trebleRatio}%`,
+    `Brightness (ZCR proxy): ${features.brightness}/100`,
+    `RMS energy: ${features.rms}`,
+  ].join('\n');
+
+  const lyricBlock=transcript
+    ?`LYRICS:\n${transcript.slice(0,2000)}${transcript.length>2000?'\n[truncated]':''}`
+    :'LYRICS: Not available';
+
+  const prompt=`You are an expert music analyst. Based only on the technical audio features and lyrics below, infer the track's mood, instrumentation, and genre. Be specific and confident.
+
+AUDIO FEATURES:
+${featText}
+
+${lyricBlock}
+
+Reply with ONLY valid JSON — no markdown, no explanation:
+{
+  "mood": "2-3 sentence mood description",
+  "mood_tags": ["tag1","tag2","tag3"],
+  "instruments": ["instrument1","instrument2"],
+  "instrumentation_description": "1-2 sentences on likely instrumentation and why",
+  "genre": ["genre1","genre2"],
+  "energy_description": "one sentence on energy and vibe"
+}`;
+
+  const r=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{
+      'x-api-key':key,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true',
+      'content-type':'application/json',
+    },
+    body:JSON.stringify({
+      model:'claude-sonnet-4-6',
+      max_tokens:1024,
+      messages:[{role:'user',content:prompt}],
+    }),
+  });
+  if(!r.ok){
+    const err=await r.json().catch(()=>({}));
+    throw new Error(err.error?.message||'Claude HTTP '+r.status);
+  }
+  const data=await r.json();
+  const text=data.content?.[0]?.text?.trim()||'{}';
+  try{return JSON.parse(text);}
+  catch{
+    const m=text.match(/\{[\s\S]*\}/);
+    if(m)return JSON.parse(m[0]);
+    throw new Error('Could not parse Claude response as JSON');
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// AUDIO — WAVEFORM CANVAS
+// ────────────────────────────────────────────────────────────────────────────
+function drawWaveform(canvas,buffer){
+  const data=buffer.getChannelData(0);
+  const W=canvas.offsetWidth||canvas.parentElement?.offsetWidth||300;
+  const H=42;
+  canvas.width=W;canvas.height=H;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,W,H);
+  const step=Math.ceil(data.length/W);
+  const mid=H/2;
+  // accent #8b7fff → accent2 #ff7eb3 gradient across width
+  const r1=139,g1=127,b1=255,r2=255,g2=126,b2=179;
+  for(let x=0;x<W;x++){
+    let mn=1,mx=-1;
+    for(let j=0;j<step;j++){const v=data[x*step+j]||0;if(v<mn)mn=v;if(v>mx)mx=v;}
+    const t=x/W;
+    const r=Math.round(r1+(r2-r1)*t),g=Math.round(g1+(g2-g1)*t),b=Math.round(b1+(b2-b1)*t);
+    ctx.strokeStyle=`rgba(${r},${g},${b},0.75)`;
+    ctx.lineWidth=1;
+    ctx.beginPath();
+    ctx.moveTo(x,mid+mn*mid);
+    ctx.lineTo(x,mid+mx*mid);
+    ctx.stroke();
+  }
+}
+
+// ────────────────────────────────────────────────────────────────────────────
+// AUDIO — RENDER
+// ────────────────────────────────────────────────────────────────────────────
+function renderAudioList(){
+  const list=document.getElementById('audio-list');
+  if(!list)return;
+  const stat=document.getElementById('audio-stat');
+  if(stat)stat.textContent=S.audioTracks.length?`${S.audioTracks.length} track${S.audioTracks.length!==1?'s':''}` :'';
+
+  if(!S.audioTracks.length){
+    list.innerHTML=`<div class="empty"><div class="empty-ico">🎵</div><div class="empty-ttl">No tracks analyzed yet</div><div class="empty-txt">Tap <strong>♪ Add MP3</strong> to upload an audio file. Prism will transcribe lyrics and analyze mood &amp; instrumentation.</div></div>`;
+    return;
+  }
+  const hasKeys=S.openaiKey||S.claudeKey;
+  const warn=hasKeys?'':
+    `<div class="key-warn">⚙ No API keys — <button onclick="openAudioSetup()">configure them</button> to enable lyrics transcription and AI analysis.</div>`;
+  list.innerHTML=warn+S.audioTracks.map(renderTrackCard).join('');
+  // Draw waveforms after DOM update
+  S.audioTracks.forEach(t=>{
+    if(!t.buffer)return;
+    const el=document.getElementById('track-'+t.id);
+    const cv=el?.querySelector('.waveform');
+    if(cv)requestAnimationFrame(()=>drawWaveform(cv,t.buffer));
+  });
+}
+
+function renderTrackCard(t){
+  const{id,name,status,error,duration,bpm,features,transcript,analysis,file}=t;
+
+  const statusMap={
+    loading:'⏳ Decoding audio…',
+    extracting:'🔍 Extracting features…',
+    transcribing:'🎤 Transcribing lyrics…',
+    analyzing:'✨ Running AI analysis…',
+  };
+  const statusHtml=statusMap[status]
+    ?`<div class="track-status"><div class="spin" style="width:16px;height:16px;border-width:2px;flex-shrink:0"></div>${statusMap[status]}</div>`:'';
+  const errHtml=status==='error'?`<div class="track-err">⚠ ${escH(error||'Analysis failed')}</div>`:'';
+
+  const hasWave=t.buffer&&status!=='loading';
+  const waveHtml=hasWave?`<div class="waveform-wrap"><canvas class="waveform"></canvas></div>`:'';
+
+  let bodyHtml='';
+  if(features){
+    const bars=Array.from({length:9},(_,i)=>{
+      const cls=i<3?'bass':i<6?'mid':'hi';
+      const pct=i<3?features.bassRatio/3:i<6?features.midRatio/3:features.trebleRatio/3;
+      return`<div class="fb ${cls}" style="height:${Math.max(8,pct)}%"></div>`;
+    }).join('');
+    const fmtDur=d=>{const m=Math.floor(d/60),s=Math.round(d%60);return`${m}:${s.toString().padStart(2,'0')}`;};
+
+    const sections=[];
+
+    // Features row
+    sections.push(`<div class="t-section">
+      <div class="t-lbl">Audio Features</div>
+      <div class="t-txt">${fmtDur(duration)} · ~${bpm} BPM · Bass ${features.bassRatio}% / Mid ${features.midRatio}% / Treble ${features.trebleRatio}%</div>
+      <div class="freq-bars" title="Bass / Mid / Treble">${bars}</div>
+    </div>`);
+
+    // Lyrics
+    if(transcript!==null&&transcript!==undefined){
+      const lyrHtml=transcript
+        ?`<div class="t-txt">${escH(transcript)}</div>`
+        :`<div class="t-txt" style="color:var(--dim);font-style:italic">No lyrics detected — possibly instrumental.</div>`;
+      sections.push(`<div class="t-section"><div class="t-lbl">Lyrics</div>${lyrHtml}</div>`);
+    } else if(status==='done'&&!S.openaiKey){
+      sections.push(`<div class="t-section"><div class="t-lbl">Lyrics</div><div class="t-txt" style="color:var(--dim);font-style:italic">Add an OpenAI key to transcribe lyrics.</div></div>`);
+    }
+
+    // AI analysis sections
+    if(analysis){
+      if(analysis.mood){
+        const tags=(analysis.mood_tags||[]).map(tag=>`<span class="abadge mood">${escH(tag)}</span>`).join('');
+        sections.push(`<div class="t-section">
+          <div class="t-lbl">Mood</div>
+          <div class="t-txt">${escH(analysis.mood)}</div>
+          ${tags?`<div class="t-tags">${tags}</div>`:''}
+        </div>`);
+      }
+      if(analysis.instrumentation_description||(analysis.instruments||[]).length){
+        const tags=(analysis.instruments||[]).map(i=>`<span class="abadge inst">${escH(i)}</span>`).join('');
+        sections.push(`<div class="t-section">
+          <div class="t-lbl">Instrumentation</div>
+          ${analysis.instrumentation_description?`<div class="t-txt">${escH(analysis.instrumentation_description)}</div>`:''}
+          ${tags?`<div class="t-tags">${tags}</div>`:''}
+        </div>`);
+      }
+      if(analysis.energy_description||(analysis.genre||[]).length){
+        const tags=(analysis.genre||[]).map(g=>`<span class="abadge genre">${escH(g)}</span>`).join('');
+        sections.push(`<div class="t-section">
+          <div class="t-lbl">Genre &amp; Energy</div>
+          ${analysis.energy_description?`<div class="t-txt">${escH(analysis.energy_description)}</div>`:''}
+          ${tags?`<div class="t-tags">${tags}</div>`:''}
+        </div>`);
+      }
+    } else if(status==='done'&&!S.claudeKey){
+      sections.push(`<div class="t-section"><div class="t-lbl">Analysis</div><div class="t-txt" style="color:var(--dim);font-style:italic">Add an Anthropic key to enable mood &amp; instrumentation analysis.</div></div>`);
+    }
+
+    bodyHtml=`<div class="track-body">${sections.join('')}</div>`;
+  }
+
+  const metaParts=[];
+  if(duration)metaParts.push((()=>{const m=Math.floor(duration/60),s=Math.round(duration%60);return`${m}:${s.toString().padStart(2,'0')}`})());
+  if(file?.size)metaParts.push(file.size<1048576?(file.size/1024).toFixed(1)+' KB':(file.size/1048576).toFixed(1)+' MB');
+
+  return`<div class="track-card" id="track-${id}">
+    <div class="track-hdr">
+      <div class="track-ico">🎵</div>
+      <div class="track-info">
+        <div class="track-name">${escH(name)}</div>
+        ${metaParts.length?`<div class="track-meta">${metaParts.join(' · ')}</div>`:''}
+      </div>
+      <button class="track-close" onclick="removeTrack('${id}')">✕</button>
+    </div>
+    ${waveHtml}${statusHtml}${errHtml}${bodyHtml}
+  </div>`;
+}
+
+function removeTrack(id){
+  S.audioTracks=S.audioTracks.filter(t=>t.id!==id);
+  renderAudioList();
+}
 
 // ────────────────────────────────────────────────────────────────────────────
 // INIT
