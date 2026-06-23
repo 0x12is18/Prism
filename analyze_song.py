@@ -17,6 +17,7 @@ print(f"Duration: {duration:.2f} sec")
 
 # BPM DETECTION
 tempo, beat_frames = librosa.beat.beat_track(y=y, sr=sr)
+tempo = float(np.atleast_1d(tempo)[0])
 print(f"Estimated BPM: {tempo:.1f}")
 
 # RMS ENERGY
