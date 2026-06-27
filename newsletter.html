@@ -1,0 +1,650 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Kindergarten Classroom Newsletter</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ── Reset & base ───────────────────────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+:root{
+  --sun:     #FFD93D;
+  --sky:     #6BCBF0;
+  --grass:   #6ECB63;
+  --rose:    #FF6B9D;
+  --lavender:#A78BFA;
+  --orange:  #FF8C42;
+  --white:   #FFFFFF;
+  --ink:     #2D2D3A;
+  --ink-soft:#5A5A72;
+  --paper:   #FFFDF7;
+  --radius:  16px;
+  --font-head:'Fredoka One',cursive;
+  --font-body:'Nunito',sans-serif;
+}
+
+body{
+  font-family:var(--font-body);
+  background:#f0f4ff;
+  color:var(--ink);
+  min-height:100vh;
+  padding:24px 16px 48px;
+}
+
+/* ── Page (letter size feel) ─────────────────────────────────────────── */
+.page{
+  max-width:760px;
+  margin:0 auto;
+  background:var(--paper);
+  border-radius:24px;
+  overflow:hidden;
+  box-shadow:0 8px 48px rgba(0,0,0,.13);
+  position:relative;
+}
+
+/* ── Confetti dots — pure CSS, no images ────────────────────────────── */
+.page::before{
+  content:'';
+  position:absolute;inset:0;
+  pointer-events:none;z-index:0;
+  background-image:
+    radial-gradient(circle,var(--sun) 4px,transparent 4px),
+    radial-gradient(circle,var(--rose) 4px,transparent 4px),
+    radial-gradient(circle,var(--sky) 4px,transparent 4px),
+    radial-gradient(circle,var(--grass) 4px,transparent 4px),
+    radial-gradient(circle,var(--lavender) 4px,transparent 4px),
+    radial-gradient(circle,var(--orange) 4px,transparent 4px);
+  background-size:120px 120px;
+  background-position:
+    10px  18px,
+    50px  60px,
+    85px  20px,
+    25px  90px,
+    70px 100px,
+    105px 50px;
+  opacity:.12;
+}
+
+/* ── Header band ─────────────────────────────────────────────────────── */
+.header{
+  background:linear-gradient(135deg,var(--lavender) 0%,var(--sky) 50%,var(--rose) 100%);
+  padding:36px 40px 28px;
+  position:relative;overflow:hidden;
+}
+.header::after{
+  content:'';
+  position:absolute;bottom:-1px;left:0;right:0;height:32px;
+  background:var(--paper);
+  border-radius:50% 50% 0 0 / 32px;
+}
+
+/* Rainbow stripe */
+.rainbow-stripe{
+  display:flex;height:7px;width:100%;border-radius:4px;
+  overflow:hidden;margin-bottom:22px;
+}
+.rainbow-stripe span{flex:1}
+
+.header-inner{display:flex;align-items:flex-start;gap:20px;position:relative;z-index:1}
+
+.header-icon{
+  width:80px;height:80px;flex-shrink:0;
+  background:rgba(255,255,255,.3);
+  border-radius:20px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:42px;
+  backdrop-filter:blur(6px);
+  border:2px solid rgba(255,255,255,.5);
+  box-shadow:0 4px 18px rgba(0,0,0,.1);
+}
+
+.header-text{flex:1}
+.class-tag{
+  display:inline-block;
+  background:rgba(255,255,255,.3);
+  border:1px solid rgba(255,255,255,.6);
+  color:#fff;
+  font-family:var(--font-body);font-size:11px;font-weight:800;
+  letter-spacing:2px;text-transform:uppercase;
+  padding:4px 12px;border-radius:20px;
+  margin-bottom:8px;
+  backdrop-filter:blur(4px);
+}
+.header-title{
+  font-family:var(--font-head);
+  font-size:clamp(26px,5vw,38px);
+  color:#fff;
+  line-height:1.1;
+  text-shadow:0 2px 12px rgba(0,0,0,.15);
+}
+.header-sub{
+  color:rgba(255,255,255,.88);
+  font-size:14px;font-weight:600;
+  margin-top:6px;
+}
+
+/* Editable class meta pills */
+.meta-row{
+  display:flex;flex-wrap:wrap;gap:8px;
+  margin-top:16px;position:relative;z-index:1;
+}
+.meta-pill{
+  display:flex;align-items:center;gap:6px;
+  background:rgba(255,255,255,.25);
+  border:1px solid rgba(255,255,255,.5);
+  color:#fff;
+  padding:5px 13px;border-radius:20px;
+  font-size:12px;font-weight:700;
+  backdrop-filter:blur(4px);
+}
+.meta-pill span.icon{font-size:14px}
+
+/* ── Body ─────────────────────────────────────────────────────────────── */
+.body{
+  padding:28px 32px 36px;
+  position:relative;z-index:1;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:20px;
+}
+
+/* ── Section card ────────────────────────────────────────────────────── */
+.card{
+  background:#fff;
+  border-radius:var(--radius);
+  padding:20px;
+  box-shadow:0 2px 12px rgba(0,0,0,.06);
+  border:2px solid transparent;
+  position:relative;
+  overflow:hidden;
+}
+.card::before{
+  content:'';
+  position:absolute;top:0;left:0;right:0;height:4px;
+  border-radius:var(--radius) var(--radius) 0 0;
+}
+.card.blue  { border-color:#D0EEFF; } .card.blue::before  { background:var(--sky); }
+.card.green { border-color:#D5F5D0; } .card.green::before { background:var(--grass); }
+.card.pink  { border-color:#FFD6E8; } .card.pink::before  { background:var(--rose); }
+.card.yellow{ border-color:#FFF3C4; } .card.yellow::before{ background:var(--sun); }
+.card.purple{ border-color:#EDE9FF; } .card.purple::before{ background:var(--lavender); }
+.card.orange{ border-color:#FFE4CC; } .card.orange::before{ background:var(--orange); }
+
+.card.full-width{ grid-column:1/-1; }
+
+.card-header{
+  display:flex;align-items:center;gap:10px;
+  margin-bottom:14px;
+}
+.card-icon{
+  width:38px;height:38px;flex-shrink:0;
+  border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:20px;
+}
+.blue   .card-icon{background:#D0EEFF}
+.green  .card-icon{background:#D5F5D0}
+.pink   .card-icon{background:#FFD6E8}
+.yellow .card-icon{background:#FFF3C4}
+.purple .card-icon{background:#EDE9FF}
+.orange .card-icon{background:#FFE4CC}
+
+.card-title{
+  font-family:var(--font-head);
+  font-size:17px;
+  letter-spacing:.3px;
+  line-height:1.1;
+}
+.blue   .card-title{color:#1A88C4}
+.green  .card-title{color:#2E9A22}
+.pink   .card-title{color:#D63870}
+.yellow .card-title{color:#B88A00}
+.purple .card-title{color:#6D49D6}
+.orange .card-title{color:#C05E00}
+
+/* ── Content typography ──────────────────────────────────────────────── */
+.card p,.card li{
+  font-size:13.5px;
+  line-height:1.65;
+  color:var(--ink-soft);
+}
+.card ul{
+  list-style:none;
+  padding:0;
+  display:flex;flex-direction:column;gap:6px;
+}
+.card ul li{
+  display:flex;gap:8px;
+  padding:6px 10px;
+  border-radius:8px;
+  background:#fafafa;
+  align-items:flex-start;
+}
+.card ul li::before{
+  content:'✦';
+  font-size:11px;margin-top:2px;flex-shrink:0;
+}
+.blue   ul li::before{color:var(--sky)}
+.green  ul li::before{color:var(--grass)}
+.pink   ul li::before{color:var(--rose)}
+.yellow ul li::before{color:var(--sun)}
+.purple ul li::before{color:var(--lavender)}
+.orange ul li::before{color:var(--orange)}
+
+/* ── Event list ──────────────────────────────────────────────────────── */
+.event-list{display:flex;flex-direction:column;gap:8px}
+.event{
+  display:flex;gap:12px;align-items:center;
+  padding:8px 10px;
+  background:#fafafa;
+  border-radius:10px;
+}
+.event-date{
+  flex-shrink:0;
+  width:44px;height:44px;
+  border-radius:10px;
+  background:linear-gradient(135deg,var(--lavender),var(--sky));
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  color:#fff;
+  line-height:1.1;
+}
+.event-date .day{font-family:var(--font-head);font-size:18px}
+.event-date .mon{font-size:9px;font-weight:800;letter-spacing:1px;text-transform:uppercase;opacity:.9}
+.event-info{flex:1}
+.event-name{font-weight:700;font-size:13px;color:var(--ink)}
+.event-desc{font-size:12px;color:var(--ink-soft);margin-top:1px}
+
+/* ── Star student ────────────────────────────────────────────────────── */
+.star-box{
+  display:flex;gap:16px;align-items:center;
+  background:linear-gradient(135deg,#FFF3C4,#FFF8E1);
+  border-radius:12px;
+  padding:14px;
+  margin-bottom:14px;
+}
+.star-avatar{
+  width:60px;height:60px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--sun),var(--orange));
+  border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:30px;
+  border:3px solid #fff;
+  box-shadow:0 4px 12px rgba(0,0,0,.1);
+}
+.star-name{
+  font-family:var(--font-head);
+  font-size:20px;color:var(--ink);
+  line-height:1.1;
+}
+.star-words{
+  font-size:12px;color:var(--ink-soft);
+  margin-top:4px;font-weight:600;
+}
+
+/* ── Message bubble ──────────────────────────────────────────────────── */
+.teacher-msg{
+  background:linear-gradient(135deg,#f5f0ff,#ffe8f5);
+  border-left:4px solid var(--lavender);
+  border-radius:0 12px 12px 0;
+  padding:14px 16px;
+  font-size:13.5px;
+  line-height:1.65;
+  color:var(--ink-soft);
+  font-style:italic;
+}
+.teacher-sig{
+  margin-top:10px;
+  font-style:normal;
+  font-weight:800;
+  color:var(--ink);
+  font-size:13px;
+}
+
+/* ── Ask-me tag cloud ────────────────────────────────────────────────── */
+.tags{display:flex;flex-wrap:wrap;gap:7px}
+.tag{
+  padding:5px 12px;
+  border-radius:20px;
+  font-size:12px;font-weight:700;
+  cursor:default;
+}
+.tag-blue  {background:#D0EEFF;color:#1A88C4}
+.tag-green {background:#D5F5D0;color:#2E9A22}
+.tag-pink  {background:#FFD6E8;color:#D63870}
+.tag-yellow{background:#FFF3C4;color:#B88A00}
+.tag-purple{background:#EDE9FF;color:#6D49D6}
+.tag-orange{background:#FFE4CC;color:#C05E00}
+
+/* ── Footer ──────────────────────────────────────────────────────────── */
+.footer{
+  padding:20px 32px 28px;
+  background:linear-gradient(135deg,#f5f0ff 0%,#e8f8ff 100%);
+  display:flex;flex-wrap:wrap;gap:20px;align-items:center;
+  position:relative;z-index:1;
+}
+.footer-contact{flex:1;min-width:200px}
+.footer-title{
+  font-family:var(--font-head);
+  font-size:15px;color:var(--lavender);
+  margin-bottom:8px;
+}
+.contact-row{
+  display:flex;align-items:center;gap:8px;
+  margin-bottom:5px;
+  font-size:12.5px;
+  color:var(--ink-soft);font-weight:600;
+}
+.contact-row .icon{font-size:15px;flex-shrink:0}
+
+.footer-badge{
+  flex-shrink:0;
+  background:linear-gradient(135deg,var(--lavender),var(--rose));
+  color:#fff;
+  border-radius:16px;
+  padding:14px 20px;
+  text-align:center;
+  font-family:var(--font-head);
+  font-size:13px;
+  letter-spacing:.5px;
+  box-shadow:0 4px 16px rgba(167,139,250,.4);
+}
+.footer-badge .big{font-size:22px;display:block;margin-bottom:2px}
+
+/* ── Editable fields (contenteditable hint) ──────────────────────────── */
+[contenteditable]{
+  outline:none;
+  border-radius:4px;
+  transition:background .15s;
+  cursor:text;
+}
+[contenteditable]:hover{background:rgba(107,203,240,.12)}
+[contenteditable]:focus{
+  background:rgba(107,203,240,.18);
+  box-shadow:0 0 0 2px var(--sky);
+}
+
+/* ── Toolbar ─────────────────────────────────────────────────────────── */
+#toolbar{
+  position:sticky;top:0;z-index:100;
+  background:rgba(255,255,255,.92);
+  backdrop-filter:blur(12px);
+  border-bottom:1px solid #e8e8f0;
+  padding:10px 24px;
+  display:flex;align-items:center;gap:10px;
+  flex-wrap:wrap;
+}
+.toolbar-brand{
+  font-family:var(--font-head);
+  font-size:17px;
+  background:linear-gradient(120deg,var(--lavender),var(--rose));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;
+  margin-right:6px;
+  flex-shrink:0;
+}
+.tb-btn{
+  display:flex;align-items:center;gap:6px;
+  padding:7px 15px;border-radius:20px;border:none;
+  font-family:var(--font-body);font-size:12px;font-weight:700;
+  cursor:pointer;transition:all .15s;
+  white-space:nowrap;
+}
+.tb-btn-pri{background:linear-gradient(135deg,var(--lavender),var(--rose));color:#fff;box-shadow:0 2px 10px rgba(167,139,250,.4)}
+.tb-btn-pri:hover{opacity:.9;transform:translateY(-1px)}
+.tb-btn-sec{background:#f0f0f8;color:var(--ink-soft)}
+.tb-btn-sec:hover{background:#e4e4f0}
+.tb-sep{width:1px;height:24px;background:#e8e8f0;flex-shrink:0}
+.tb-hint{font-size:11px;color:#aaa;margin-left:auto;font-weight:600}
+
+/* ── Print styles ────────────────────────────────────────────────────── */
+@media print{
+  body{padding:0;background:#fff}
+  #toolbar{display:none}
+  .page{
+    max-width:none;margin:0;
+    border-radius:0;
+    box-shadow:none;
+  }
+  .body{gap:14px}
+  .card{break-inside:avoid}
+  [contenteditable]:hover,[contenteditable]:focus{
+    background:transparent;box-shadow:none;
+  }
+}
+
+@media(max-width:580px){
+  .body{grid-template-columns:1fr}
+  .card.full-width{grid-column:auto}
+  .header{padding:24px 20px 20px}
+  .body{padding:20px 16px 28px}
+  .footer{padding:16px 20px 24px}
+}
+</style>
+</head>
+<body>
+
+<!-- ── Toolbar ─────────────────────────────────────────────────────────── -->
+<div id="toolbar">
+  <span class="toolbar-brand">✏️ Newsletter</span>
+  <div class="tb-sep"></div>
+  <button class="tb-btn tb-btn-sec" onclick="resetToday()">📅 Set Today's Date</button>
+  <button class="tb-btn tb-btn-sec" onclick="clearAll()">🗑 Clear All Text</button>
+  <div class="tb-sep"></div>
+  <button class="tb-btn tb-btn-pri" onclick="window.print()">🖨 Print / Save PDF</button>
+  <span class="tb-hint">Click any text to edit it</span>
+</div>
+
+<!-- ── Newsletter page ─────────────────────────────────────────────────── -->
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="rainbow-stripe">
+      <span style="background:#FF6B9D"></span>
+      <span style="background:#FF8C42"></span>
+      <span style="background:#FFD93D"></span>
+      <span style="background:#6ECB63"></span>
+      <span style="background:#6BCBF0"></span>
+      <span style="background:#A78BFA"></span>
+    </div>
+    <div class="header-inner">
+      <div class="header-icon">🎒</div>
+      <div class="header-text">
+        <div class="class-tag">Kindergarten Newsletter</div>
+        <div class="header-title" contenteditable spellcheck="false">Mrs. Johnson's<br>Kindergarten Class</div>
+        <div class="header-sub" contenteditable spellcheck="false">Room 5  ·  Sunshine Elementary School</div>
+        <div class="meta-row">
+          <div class="meta-pill"><span class="icon">📅</span> <span contenteditable id="pill-week" spellcheck="false">Week of June 30, 2025</span></div>
+          <div class="meta-pill"><span class="icon">📖</span> <span contenteditable spellcheck="false">Volume 36 — Issue 10</span></div>
+          <div class="meta-pill"><span class="icon">🌈</span> <span contenteditable spellcheck="false">End-of-Year Edition</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Body grid -->
+  <div class="body">
+
+    <!-- What We Learned -->
+    <div class="card blue">
+      <div class="card-header">
+        <div class="card-icon">📚</div>
+        <div class="card-title">What We Learned</div>
+      </div>
+      <ul>
+        <li contenteditable spellcheck="false">Reading: We practiced sounding out short vowel words and built our sight word wall to 100 words!</li>
+        <li contenteditable spellcheck="false">Math: Counting by 2s and 5s — we used snap cubes and number lines.</li>
+        <li contenteditable spellcheck="false">Science: Planted bean seeds and made predictions about what they need to grow.</li>
+        <li contenteditable spellcheck="false">Art: Watercolor butterflies — ask your child to show you theirs!</li>
+      </ul>
+    </div>
+
+    <!-- Upcoming Events -->
+    <div class="card purple">
+      <div class="card-header">
+        <div class="card-icon">🗓</div>
+        <div class="card-title">Upcoming Events</div>
+      </div>
+      <div class="event-list">
+        <div class="event">
+          <div class="event-date">
+            <span class="day" contenteditable spellcheck="false">30</span>
+            <span class="mon" contenteditable spellcheck="false">Jun</span>
+          </div>
+          <div class="event-info">
+            <div class="event-name" contenteditable spellcheck="false">Field Day 🏃</div>
+            <div class="event-desc" contenteditable spellcheck="false">Wear sneakers & bring water!</div>
+          </div>
+        </div>
+        <div class="event">
+          <div class="event-date" style="background:linear-gradient(135deg,var(--rose),var(--orange))">
+            <span class="day" contenteditable spellcheck="false">2</span>
+            <span class="mon" contenteditable spellcheck="false">Jul</span>
+          </div>
+          <div class="event-info">
+            <div class="event-name" contenteditable spellcheck="false">Book Character Parade 🎭</div>
+            <div class="event-desc" contenteditable spellcheck="false">Dress as your favourite book character.</div>
+          </div>
+        </div>
+        <div class="event">
+          <div class="event-date" style="background:linear-gradient(135deg,var(--grass),var(--sky))">
+            <span class="day" contenteditable spellcheck="false">5</span>
+            <span class="mon" contenteditable spellcheck="false">Jul</span>
+          </div>
+          <div class="event-info">
+            <div class="event-name" contenteditable spellcheck="false">End-of-Year Celebration 🎉</div>
+            <div class="event-desc" contenteditable spellcheck="false">Parents welcome — 2:00 PM in the gym.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Star of the Week -->
+    <div class="card yellow">
+      <div class="card-header">
+        <div class="card-icon">⭐</div>
+        <div class="card-title">Star of the Week</div>
+      </div>
+      <div class="star-box">
+        <div class="star-avatar">🌟</div>
+        <div>
+          <div class="star-name" contenteditable spellcheck="false">Sofia Martinez</div>
+          <div class="star-words" contenteditable spellcheck="false">Age 6 · Favourite color: Purple · Loves dinosaurs</div>
+        </div>
+      </div>
+      <ul>
+        <li contenteditable spellcheck="false">Sofia always helps her classmates when they feel stuck.</li>
+        <li contenteditable spellcheck="false">She can name all the dinosaurs in our class library!</li>
+        <li contenteditable spellcheck="false">She wrote her very first sentence this week — we're so proud!</li>
+      </ul>
+    </div>
+
+    <!-- Reminders -->
+    <div class="card green">
+      <div class="card-header">
+        <div class="card-icon">📌</div>
+        <div class="card-title">Important Reminders</div>
+      </div>
+      <ul>
+        <li contenteditable spellcheck="false">Please return library books by Friday, July 4th.</li>
+        <li contenteditable spellcheck="false">Show-and-tell next Tuesday — bring something that starts with the letter M.</li>
+        <li contenteditable spellcheck="false">Sunscreen & a hat are needed every day this week.</li>
+        <li contenteditable spellcheck="false">School supply wish list has been sent home — thank you for your generosity!</li>
+      </ul>
+    </div>
+
+    <!-- Ask Me About / Vocabulary -->
+    <div class="card pink">
+      <div class="card-header">
+        <div class="card-icon">💬</div>
+        <div class="card-title">Ask Me About…</div>
+      </div>
+      <p style="margin-bottom:12px;font-size:13px" contenteditable spellcheck="false">Spark a conversation on the drive home with these talking points from our week!</p>
+      <div class="tags">
+        <span class="tag tag-pink"   contenteditable spellcheck="false">Bean seeds 🌱</span>
+        <span class="tag tag-blue"   contenteditable spellcheck="false">Counting by 5s</span>
+        <span class="tag tag-purple" contenteditable spellcheck="false">My watercolour butterfly</span>
+        <span class="tag tag-yellow" contenteditable spellcheck="false">Our class pet 🐢</span>
+        <span class="tag tag-green"  contenteditable spellcheck="false">My favourite book character</span>
+        <span class="tag tag-orange" contenteditable spellcheck="false">My new sight words</span>
+      </div>
+    </div>
+
+    <!-- From the Teacher -->
+    <div class="card orange">
+      <div class="card-header">
+        <div class="card-icon">💌</div>
+        <div class="card-title">Note From the Teacher</div>
+      </div>
+      <div class="teacher-msg" contenteditable spellcheck="false">
+        What an incredible year it has been! I look at each child and see so much growth — not just in reading and math, but in kindness, curiosity, and confidence. Thank you for trusting me with your little ones. It has truly been my honour.
+      </div>
+      <div class="teacher-sig" contenteditable spellcheck="false">With love, Mrs. Johnson 🌷</div>
+    </div>
+
+    <!-- Vocabulary / Theme (full width) -->
+    <div class="card blue full-width">
+      <div class="card-header">
+        <div class="card-icon">🔤</div>
+        <div class="card-title">This Week's Big Words</div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px">
+        <div style="background:#f0f9ff;border-radius:10px;padding:10px 14px">
+          <div style="font-weight:800;font-size:13px;color:#1A88C4" contenteditable spellcheck="false">Germinate</div>
+          <div style="font-size:12px;color:#5A5A72;margin-top:2px" contenteditable spellcheck="false">When a seed sprouts and begins to grow roots and a shoot.</div>
+        </div>
+        <div style="background:#f0fff4;border-radius:10px;padding:10px 14px">
+          <div style="font-weight:800;font-size:13px;color:#2E9A22" contenteditable spellcheck="false">Predict</div>
+          <div style="font-size:12px;color:#5A5A72;margin-top:2px" contenteditable spellcheck="false">Making a smart guess about what will happen next, using what you already know.</div>
+        </div>
+        <div style="background:#fff5f9;border-radius:10px;padding:10px 14px">
+          <div style="font-weight:800;font-size:13px;color:#D63870" contenteditable spellcheck="false">Pattern</div>
+          <div style="font-size:12px;color:#5A5A72;margin-top:2px" contenteditable spellcheck="false">Something that repeats in a regular, predictable order — like ABAB!</div>
+        </div>
+        <div style="background:#fdf5ff;border-radius:10px;padding:10px 14px">
+          <div style="font-weight:800;font-size:13px;color:#6D49D6" contenteditable spellcheck="false">Symmetry</div>
+          <div style="font-size:12px;color:#5A5A72;margin-top:2px" contenteditable spellcheck="false">When both sides of a shape or picture look exactly the same — like our butterflies!</div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /body -->
+
+  <!-- Footer / Contact -->
+  <div class="footer">
+    <div class="footer-contact">
+      <div class="footer-title">Get in Touch 👋</div>
+      <div class="contact-row"><span class="icon">📧</span> <span contenteditable spellcheck="false">johnson.k@sunshineelem.edu</span></div>
+      <div class="contact-row"><span class="icon">📞</span> <span contenteditable spellcheck="false">(555) 820-3301 — leave a voicemail anytime</span></div>
+      <div class="contact-row"><span class="icon">🕐</span> <span contenteditable spellcheck="false">Office hours: Mon & Wed 3:00 – 4:00 PM</span></div>
+      <div class="contact-row"><span class="icon">🌐</span> <span contenteditable spellcheck="false">classroom.sunshineelem.edu/johnson</span></div>
+    </div>
+    <div class="footer-badge">
+      <span class="big">🎓</span>
+      Happy<br>Learning!
+    </div>
+  </div>
+
+</div><!-- /page -->
+
+<script>
+function resetToday(){
+  const now=new Date();
+  const opts={month:'long',day:'numeric',year:'numeric'};
+  const el=document.getElementById('pill-week');
+  if(el)el.textContent='Week of '+now.toLocaleDateString('en-US',opts);
+}
+
+function clearAll(){
+  if(!confirm('Clear all editable text and reset to blank? This cannot be undone.'))return;
+  document.querySelectorAll('[contenteditable]').forEach(el=>{
+    const tag=el.tagName.toLowerCase();
+    if(tag==='span'||tag==='div'||tag==='p')el.textContent='Click to edit…';
+  });
+}
+</script>
+</body>
+</html>
