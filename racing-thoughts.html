@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Racing Thoughts — Music Video</title>
+<meta name="description" content="An audio-reactive music video for the track &quot;Racing Thoughts&quot;." />
+<style>
+  :root { color-scheme: dark; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; background: #05060d; overflow: hidden; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    color: #e8ecff;
+    -webkit-font-smoothing: antialiased;
+    touch-action: none;
+  }
+
+  #stage { position: fixed; inset: 0; }
+  canvas { display: block; width: 100%; height: 100%; }
+
+  /* ---- Intro / title card ---- */
+  #intro {
+    position: fixed; inset: 0; z-index: 20;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 24px;
+    background: radial-gradient(circle at 50% 35%, #15183a 0%, #08091a 55%, #05060d 100%);
+    transition: opacity 0.9s ease;
+  }
+  #intro.hidden { opacity: 0; pointer-events: none; }
+  .eyebrow {
+    letter-spacing: 0.42em; text-transform: uppercase; font-size: 12px;
+    color: #7c84c8; margin-bottom: 18px; padding-left: 0.42em;
+  }
+  #intro h1 {
+    font-size: clamp(40px, 11vw, 104px); font-weight: 800; line-height: 0.95;
+    letter-spacing: -0.02em;
+    background: linear-gradient(120deg, #b8c0ff 0%, #8b6bff 40%, #ff6f9c 80%, #ffd36e 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 0 28px rgba(139, 107, 255, 0.35));
+  }
+  #intro h1 .l2 { display: block; opacity: 0.92; }
+  .sub { margin-top: 16px; color: #9aa0d8; font-size: 14px; letter-spacing: 0.04em; }
+  #play {
+    margin-top: 40px; cursor: pointer; border: none; border-radius: 999px;
+    padding: 16px 40px; font-size: 16px; font-weight: 700; letter-spacing: 0.06em;
+    color: #0a0b1c; background: linear-gradient(120deg, #b8c0ff, #8b6bff 55%, #ff6f9c);
+    box-shadow: 0 10px 40px rgba(139, 107, 255, 0.5);
+    transition: transform 0.18s ease, box-shadow 0.18s ease;
+  }
+  #play:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 14px 50px rgba(255, 111, 156, 0.55); }
+  #play:active { transform: translateY(0) scale(0.99); }
+  .hint { margin-top: 18px; font-size: 12px; color: #5a608f; letter-spacing: 0.08em; }
+
+  /* ---- Transport / controls ---- */
+  #hud {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 15;
+    padding: 18px clamp(16px, 4vw, 40px) clamp(16px, 3vh, 28px);
+    background: linear-gradient(to top, rgba(5, 6, 13, 0.85), rgba(5, 6, 13, 0));
+    opacity: 0; transition: opacity 0.6s ease;
+    display: flex; flex-direction: column; gap: 12px;
+  }
+  #hud.show { opacity: 1; }
+  #hud.idle { opacity: 0; }
+  .titleline { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .titleline .t { font-weight: 700; font-size: 15px; letter-spacing: 0.02em; }
+  .titleline .meta { font-size: 12px; color: #7c84c8; letter-spacing: 0.14em; text-transform: uppercase; }
+  .bar { display: flex; align-items: center; gap: 14px; }
+  button.ctl {
+    flex: 0 0 auto; width: 44px; height: 44px; border-radius: 50%;
+    border: 1px solid rgba(184, 192, 255, 0.25); background: rgba(184, 192, 255, 0.08);
+    color: #e8ecff; cursor: pointer; font-size: 16px; display: grid; place-items: center;
+    transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  button.ctl:hover { background: rgba(184, 192, 255, 0.18); border-color: rgba(184, 192, 255, 0.5); }
+  .time { font-variant-numeric: tabular-nums; font-size: 12px; color: #9aa0d8; min-width: 42px; text-align: center; }
+  #seek { position: relative; flex: 1 1 auto; height: 6px; border-radius: 999px;
+    background: rgba(184, 192, 255, 0.14); cursor: pointer; overflow: hidden; }
+  #seekFill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
+    background: linear-gradient(90deg, #8b6bff, #ff6f9c); border-radius: 999px; }
+  @media (max-width: 520px) { .time { display: none; } }
+</style>
+</head>
+<body>
+  <div id="stage"><canvas id="c"></canvas></div>
+
+  <section id="intro">
+    <div class="eyebrow">A Music Video</div>
+    <h1>Racing<span class="l2">Thoughts</span></h1>
+    <div class="sub">an audio-reactive visual for the track</div>
+    <button id="play">▶  Play the video</button>
+    <div class="hint">best with sound on · headphones recommended</div>
+  </section>
+
+  <div id="hud">
+    <div class="titleline">
+      <span class="t">Racing Thoughts</span>
+      <span class="meta">Draft 1 · Audio-reactive video</span>
+    </div>
+    <div class="bar">
+      <button class="ctl" id="toggle" aria-label="Play / pause">❚❚</button>
+      <span class="time" id="cur">0:00</span>
+      <div id="seek"><div id="seekFill"></div></div>
+      <span class="time" id="dur">0:00</span>
+      <button class="ctl" id="restart" aria-label="Restart">⟲</button>
+    </div>
+  </div>
+
+  <audio id="audio" src="media/racing-thoughts.mp3" preload="auto"></audio>
+
+<script>
+(() => {
+  "use strict";
+
+  const canvas = document.getElementById("c");
+  const ctx = canvas.getContext("2d", { alpha: false });
+  const audio = document.getElementById("audio");
+  const intro = document.getElementById("intro");
+  const playBtn = document.getElementById("play");
+  const hud = document.getElementById("hud");
+  const toggleBtn = document.getElementById("toggle");
+  const restartBtn = document.getElementById("restart");
+  const seek = document.getElementById("seek");
+  const seekFill = document.getElementById("seekFill");
+  const curEl = document.getElementById("cur");
+  const durEl = document.getElementById("dur");
+
+  // ---- Sizing ----------------------------------------------------------
+  let W = 0, H = 0, DPR = 1, CX = 0, CY = 0;
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    canvas.width = Math.round(W * DPR);
+    canvas.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    CX = W / 2; CY = H / 2;
+  }
+  window.addEventListener("resize", resize);
+  resize();
+
+  // ---- Web Audio -------------------------------------------------------
+  let audioCtx, analyser, freq, timeData, sampleRate = 48000;
+  function initAudio() {
+    if (audioCtx) return;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    audioCtx = new AC();
+    sampleRate = audioCtx.sampleRate;
+    const src = audioCtx.createMediaElementSource(audio);
+    analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 2048;
+    analyser.smoothingTimeConstant = 0.82;
+    src.connect(analyser);
+    analyser.connect(audioCtx.destination);
+    freq = new Uint8Array(analyser.frequencyBinCount);
+    timeData = new Uint8Array(analyser.fftSize);
+  }
+
+  // Average a frequency range (Hz) from the FFT bins -> 0..1
+  function band(loHz, hiHz) {
+    if (!analyser) return 0;
+    const nyq = sampleRate / 2;
+    const n = analyser.frequencyBinCount;
+    let lo = Math.floor((loHz / nyq) * n);
+    let hi = Math.ceil((hiHz / nyq) * n);
+    lo = Math.max(0, lo); hi = Math.min(n - 1, Math.max(lo + 1, hi));
+    let s = 0;
+    for (let i = lo; i < hi; i++) s += freq[i];
+    return s / ((hi - lo) * 255);
+  }
+
+  // ---- Intrusive-thought word stream -----------------------------------
+  const PHRASES = [
+    "what if", "3 a.m. again", "did i lock the door", "slow down",
+    "i can't stop", "overthinking", "say it again", "too loud in here",
+    "breathe", "what did i say", "go to sleep", "not now", "again",
+    "racing", "rewind it", "one more time", "let it go", "still awake",
+    "hush", "spiraling", "quiet down", "remember that?", "tick tick tick"
+  ];
+
+  // ---- Particles (the "racing" streaks) --------------------------------
+  const STREAKS = [];
+  const STREAK_MAX = 150;
+  function spawnStreak(energy) {
+    const ang = Math.random() * Math.PI * 2;
+    const speed = 2 + energy * 16 + Math.random() * 4;
+    STREAKS.push({
+      x: CX + (Math.random() - 0.5) * 40,
+      y: CY + (Math.random() - 0.5) * 40,
+      vx: Math.cos(ang) * speed,
+      vy: Math.sin(ang) * speed,
+      life: 1,
+      hue: 220 + Math.random() * 110,
+      w: 0.6 + Math.random() * 1.8
+    });
+    if (STREAKS.length > STREAK_MAX) STREAKS.shift();
+  }
+
+  const WORDS = [];
+  function spawnWord() {
+    const txt = PHRASES[(Math.random() * PHRASES.length) | 0];
+    WORDS.push({
+      txt,
+      x: Math.random() * W,
+      y: H + 30,
+      vy: -(0.4 + Math.random() * 1.1),
+      drift: (Math.random() - 0.5) * 0.5,
+      life: 0, ttl: 1,
+      size: 14 + Math.random() * 22,
+      hue: 210 + Math.random() * 130,
+      jitter: Math.random() * 10
+    });
+    if (WORDS.length > 34) WORDS.shift();
+  }
+
+  // ---- Beat detection (bass energy vs rolling average) -----------------
+  let bassAvg = 0, beatPulse = 0, lastBeat = 0;
+  function detectBeat(bass, t) {
+    bassAvg = bassAvg * 0.94 + bass * 0.06;
+    if (bass > bassAvg * 1.32 && bass > 0.18 && t - lastBeat > 0.16) {
+      lastBeat = t;
+      beatPulse = Math.min(1.6, beatPulse + 0.9 + bass);
+      return true;
+    }
+    return false;
+  }
+
+  // ---- Synapse ring nodes (the "mind") ---------------------------------
+  const NODES = 72;
+  const ringPhase = new Float32Array(NODES);
+  for (let i = 0; i < NODES; i++) ringPhase[i] = Math.random() * Math.PI * 2;
+
+  let hueShift = 0;
+  let started = false, raf = 0, t0 = 0;
+  let wordTimer = 0;
+
+  function frame(now) {
+    raf = requestAnimationFrame(frame);
+    const t = now / 1000;
+
+    if (analyser) analyser.getByteFrequencyData(freq);
+    const bass = band(30, 140);
+    const lowMid = band(140, 500);
+    const mid = band(500, 2000);
+    const high = band(2000, 8000);
+    const level = (bass * 1.4 + lowMid + mid + high) / 4;
+
+    detectBeat(bass, t);
+    beatPulse *= 0.9;
+    hueShift += 0.15 + high * 1.4;
+
+    // ---- Background: layered, mood reacts to energy ----
+    const anx = Math.min(1, bass * 1.3 + beatPulse * 0.3); // anxiety -> warmer
+    const g = ctx.createRadialGradient(CX, CY, 0, CX, CY, Math.max(W, H) * 0.75);
+    g.addColorStop(0, `hsl(${248 + anx * 18}, ${42 + anx * 20}%, ${7 + level * 9}%)`);
+    g.addColorStop(0.55, `hsl(${244}, 38%, ${4 + level * 4}%)`);
+    g.addColorStop(1, "#04050b");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, W, H);
+
+    // subtle motion trails by overlaying translucent dark
+    ctx.fillStyle = "rgba(4,5,11,0.12)";
+    ctx.fillRect(0, 0, W, H);
+
+    const baseR = Math.min(W, H) * 0.17;
+    const pulseR = baseR * (1 + beatPulse * 0.22 + level * 0.18);
+
+    // ---- Racing streaks ----
+    ctx.globalCompositeOperation = "lighter";
+    const spawnN = Math.round(bass * 6 + level * 3);
+    for (let i = 0; i < spawnN; i++) spawnStreak(level + beatPulse * 0.4);
+    for (let i = STREAKS.length - 1; i >= 0; i--) {
+      const p = STREAKS[i];
+      const px = p.x, py = p.y;
+      p.x += p.vx; p.y += p.vy;
+      p.vx *= 0.985; p.vy *= 0.985;
+      p.life -= 0.012;
+      if (p.life <= 0) { STREAKS.splice(i, 1); continue; }
+      ctx.strokeStyle = `hsla(${(p.hue + hueShift) % 360}, 90%, ${58 + high * 25}%, ${p.life * 0.55})`;
+      ctx.lineWidth = p.w * (0.6 + beatPulse * 0.5);
+      ctx.beginPath();
+      ctx.moveTo(px, py);
+      ctx.lineTo(p.x, p.y);
+      ctx.stroke();
+    }
+
+    // ---- Synapse ring (the mind, reacting to spectrum) ----
+    ctx.lineWidth = 1.4;
+    let prevX = 0, prevY = 0, firstX = 0, firstY = 0;
+    for (let i = 0; i < NODES; i++) {
+      const a = (i / NODES) * Math.PI * 2;
+      const bin = (i / NODES);
+      // sample spectrum around the ring
+      const amp = band(60 + bin * 5000, 60 + bin * 5000 + 260);
+      const r = pulseR + amp * baseR * 1.7 + Math.sin(t * 2 + ringPhase[i]) * 4;
+      const x = CX + Math.cos(a) * r;
+      const y = CY + Math.sin(a) * r;
+      const hue = (215 + bin * 150 + hueShift) % 360;
+      if (i === 0) { firstX = x; firstY = y; }
+      else {
+        ctx.strokeStyle = `hsla(${hue}, 88%, ${60 + amp * 30}%, 0.55)`;
+        ctx.beginPath(); ctx.moveTo(prevX, prevY); ctx.lineTo(x, y); ctx.stroke();
+      }
+      // node glow
+      const nodeR = 1 + amp * 6 + beatPulse * 2;
+      ctx.fillStyle = `hsla(${hue}, 95%, 70%, ${0.5 + amp})`;
+      ctx.beginPath(); ctx.arc(x, y, nodeR, 0, Math.PI * 2); ctx.fill();
+      // cross-links: occasional chords across the mind (thoughts firing)
+      if (i % 6 === 0 && amp > 0.25) {
+        const j = (i + 18 + ((t * 3) | 0)) % NODES;
+        const aj = (j / NODES) * Math.PI * 2;
+        const rj = pulseR + 8;
+        ctx.strokeStyle = `hsla(${hue}, 90%, 65%, ${amp * 0.4})`;
+        ctx.lineWidth = 0.8;
+        ctx.beginPath();
+        ctx.moveTo(x, y);
+        ctx.lineTo(CX + Math.cos(aj) * rj, CY + Math.sin(aj) * rj);
+        ctx.stroke();
+        ctx.lineWidth = 1.4;
+      }
+      prevX = x; prevY = y;
+    }
+    ctx.strokeStyle = `hsla(${(215 + hueShift) % 360}, 88%, 62%, 0.55)`;
+    ctx.beginPath(); ctx.moveTo(prevX, prevY); ctx.lineTo(firstX, firstY); ctx.stroke();
+
+    // ---- Core glow (heartbeat of the track) ----
+    const coreR = pulseR * 0.5;
+    const cg = ctx.createRadialGradient(CX, CY, 0, CX, CY, coreR * 2.4);
+    cg.addColorStop(0, `hsla(${(280 + hueShift) % 360}, 90%, 72%, ${0.5 + beatPulse * 0.3})`);
+    cg.addColorStop(0.4, `hsla(${(320 + hueShift) % 360}, 90%, 60%, 0.18)`);
+    cg.addColorStop(1, "rgba(0,0,0,0)");
+    ctx.fillStyle = cg;
+    ctx.beginPath(); ctx.arc(CX, CY, coreR * 2.4, 0, Math.PI * 2); ctx.fill();
+
+    // ---- Floating intrusive thoughts ----
+    ctx.globalCompositeOperation = "screen";
+    wordTimer -= 1;
+    if (wordTimer <= 0) {
+      spawnWord();
+      wordTimer = Math.max(8, 46 - level * 60 - beatPulse * 20);
+    }
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    for (let i = WORDS.length - 1; i >= 0; i--) {
+      const w = WORDS[i];
+      w.life += 0.012;
+      w.y += w.vy * (1 + level * 1.4);
+      w.x += w.drift + Math.sin(w.life * 6 + w.jitter) * (high * 3);
+      const fade = Math.sin(Math.min(Math.PI, w.life * Math.PI));
+      if (w.life >= 1 || w.y < -40) { WORDS.splice(i, 1); continue; }
+      ctx.font = `600 ${w.size}px -apple-system, "Segoe UI", Roboto, sans-serif`;
+      ctx.fillStyle = `hsla(${(w.hue + hueShift) % 360}, 80%, 78%, ${fade * 0.7})`;
+      ctx.shadowColor = `hsla(${(w.hue + hueShift) % 360}, 90%, 60%, ${fade})`;
+      ctx.shadowBlur = 12 + beatPulse * 16;
+      ctx.fillText(w.txt, w.x, w.y);
+    }
+    ctx.shadowBlur = 0;
+    ctx.globalCompositeOperation = "source-over";
+
+    // ---- Vignette ----
+    const vg = ctx.createRadialGradient(CX, CY, Math.min(W, H) * 0.35, CX, CY, Math.max(W, H) * 0.7);
+    vg.addColorStop(0, "rgba(0,0,0,0)");
+    vg.addColorStop(1, "rgba(2,3,8,0.55)");
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, W, H);
+
+    updateTransport();
+  }
+
+  // ---- Transport / UI --------------------------------------------------
+  function fmt(s) {
+    if (!isFinite(s)) return "0:00";
+    s = Math.max(0, s | 0);
+    return (s / 60 | 0) + ":" + String(s % 60).padStart(2, "0");
+  }
+  function updateTransport() {
+    const d = audio.duration || 0;
+    seekFill.style.width = (d ? (audio.currentTime / d) * 100 : 0) + "%";
+    curEl.textContent = fmt(audio.currentTime);
+    durEl.textContent = fmt(d);
+  }
+  audio.addEventListener("loadedmetadata", () => { durEl.textContent = fmt(audio.duration); });
+  audio.addEventListener("play", () => { toggleBtn.textContent = "❚❚"; });
+  audio.addEventListener("pause", () => { toggleBtn.textContent = "▶"; });
+  audio.addEventListener("ended", () => { toggleBtn.textContent = "▶"; });
+
+  function start() {
+    if (started) { return; }
+    started = true;
+    initAudio();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    audio.play().catch(() => {});
+    intro.classList.add("hidden");
+    hud.classList.add("show");
+    raf = requestAnimationFrame(frame);
+    scheduleIdle();
+  }
+
+  playBtn.addEventListener("click", start);
+  toggleBtn.addEventListener("click", () => {
+    if (!started) { start(); return; }
+    if (audio.paused) { audioCtx && audioCtx.resume(); audio.play(); }
+    else audio.pause();
+  });
+  restartBtn.addEventListener("click", () => {
+    audio.currentTime = 0;
+    if (!started) start(); else { audioCtx && audioCtx.resume(); audio.play(); }
+  });
+  seek.addEventListener("click", (e) => {
+    const r = seek.getBoundingClientRect();
+    const p = Math.min(1, Math.max(0, (e.clientX - r.left) / r.width));
+    if (audio.duration) audio.currentTime = p * audio.duration;
+  });
+
+  // Auto-hide HUD while playing
+  let idleTimer = 0;
+  function scheduleIdle() {
+    clearTimeout(idleTimer);
+    hud.classList.remove("idle");
+    idleTimer = setTimeout(() => { if (!audio.paused) hud.classList.add("idle"); }, 2800);
+  }
+  ["mousemove", "touchstart", "click"].forEach(ev =>
+    window.addEventListener(ev, () => { if (started) scheduleIdle(); }, { passive: true }));
+
+  // Keyboard: space = play/pause
+  window.addEventListener("keydown", (e) => {
+    if (e.code === "Space") { e.preventDefault(); toggleBtn.click(); }
+  });
+})();
+</script>
+</body>
+</html>
