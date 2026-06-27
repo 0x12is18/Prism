@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Racing Thoughts — offline renderer</title>
+<style>
+  html,body{margin:0;background:#05060d;overflow:hidden}
+  canvas{display:block}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+<script>
+(() => {
+"use strict";
+
+// ===== Config (set by harness before prepare) =====
+const CFG = window.__CFG__ = { W: 1280, H: 720, fps: 30 };
+
+const canvas = document.getElementById("c");
+const ctx = canvas.getContext("2d", { alpha: false });
+let W, H, CX, CY, STEP;
+
+function setup() {
+  W = CFG.W; H = CFG.H; CX = W/2; CY = H/2;
+  canvas.width = W; canvas.height = H;
+  STEP = 60 / CFG.fps;           // motion scaled to a 60fps reference
+}
+
+// ===== Audio decode + offline spectrum =====
+const FFT_N = 2048, BINS = FFT_N/2;
+let pcm = null, sampleRate = 48000, duration = 0;
+const freq = new Uint8Array(BINS);
+const smoothed = new Float32Array(BINS);
+const SMOOTH = 0.82, MIN_DB = -100, MAX_DB = -28;
+
+// --- iterative radix-2 FFT ---
+const rev = new Uint16Array(FFT_N);
+(function(){ for(let i=0;i<FFT_N;i++){let x=i,r=0; for(let j=0;j<11;j++){r=(r<<1)|(x&1);x>>=1;} rev[i]=r;} })();
+const cosT = new Float32Array(FFT_N/2), sinT = new Float32Array(FFT_N/2);
+for(let i=0;i<FFT_N/2;i++){ cosT[i]=Math.cos(-2*Math.PI*i/FFT_N); sinT[i]=Math.sin(-2*Math.PI*i/FFT_N); }
+const re = new Float32Array(FFT_N), im = new Float32Array(FFT_N);
+const hann = new Float32Array(FFT_N);
+for(let i=0;i<FFT_N;i++) hann[i] = 0.5*(1-Math.cos(2*Math.PI*i/(FFT_N-1)));
+
+function fft(){
+  for(let i=0;i<FFT_N;i++){ const r=rev[i]; if(r>i){ let t=re[i];re[i]=re[r];re[r]=t; } }
+  for(let len=2; len<=FFT_N; len<<=1){
+    const half=len>>1, tstep=FFT_N/len;
+    for(let i=0;i<FFT_N;i+=len){
+      for(let j=0,k=0;j<half;j++,k+=tstep){
+        const c=cosT[k], s=sinT[k];
+        const a=i+j, b=a+half;
+        const tr=re[b]*c - im[b]*s, ti=re[b]*s + im[b]*c;
+        re[b]=re[a]-tr; im[b]=im[a]-ti;
+        re[a]+=tr;      im[a]+=ti;
+      }
+    }
+  }
+}
+
+function computeSpectrum(t){
+  // window centred slightly behind t (like a live analyser snapshot)
+  let start = Math.floor(t*sampleRate) - FFT_N;
+  if(start < 0) start = 0;
+  const n = pcm.length;
+  for(let i=0;i<FFT_N;i++){
+    const idx = start+i;
+    const s = idx < n ? pcm[idx] : 0;
+    re[i] = s * hann[i]; im[i] = 0;
+  }
+  fft();
+  for(let k=0;k<BINS;k++){
+    const mag = Math.sqrt(re[k]*re[k]+im[k]*im[k]) / FFT_N;
+    smoothed[k] = SMOOTH*smoothed[k] + (1-SMOOTH)*mag;
+    let db = 20*Math.log10(smoothed[k] + 1e-9);
+    let v = (db - MIN_DB) / (MAX_DB - MIN_DB);
+    v = v < 0 ? 0 : v > 1 ? 1 : v;
+    freq[k] = (v*255)|0;
+  }
+}
+
+function band(loHz, hiHz){
+  const nyq = sampleRate/2;
+  let lo = Math.floor((loHz/nyq)*BINS), hi = Math.ceil((hiHz/nyq)*BINS);
+  lo = Math.max(0, lo); hi = Math.min(BINS-1, Math.max(lo+1, hi));
+  let s=0; for(let i=lo;i<hi;i++) s+=freq[i];
+  return s/((hi-lo)*255);
+}
+
+// ===== Visual state (ported from the live page) =====
+const PHRASES = ["what if","3 a.m. again","did i lock the door","slow down",
+  "i can't stop","overthinking","say it again","too loud in here","breathe",
+  "what did i say","go to sleep","not now","again","racing","rewind it",
+  "one more time","let it go","still awake","hush","spiraling","quiet down",
+  "remember that?","tick tick tick"];
+
+const STREAKS=[], STREAK_MAX=150, WORDS=[];
+function spawnStreak(energy){
+  const ang=Math.random()*Math.PI*2, speed=2+energy*16+Math.random()*4;
+  STREAKS.push({x:CX+(Math.random()-0.5)*40,y:CY+(Math.random()-0.5)*40,
+    vx:Math.cos(ang)*speed,vy:Math.sin(ang)*speed,life:1,
+    hue:220+Math.random()*110,w:0.6+Math.random()*1.8});
+  if(STREAKS.length>STREAK_MAX) STREAKS.shift();
+}
+function spawnWord(){
+  WORDS.push({txt:PHRASES[(Math.random()*PHRASES.length)|0],x:Math.random()*W,y:H+30,
+    vy:-(0.4+Math.random()*1.1),drift:(Math.random()-0.5)*0.5,life:0,
+    size:14+Math.random()*22,hue:210+Math.random()*130,jitter:Math.random()*10});
+  if(WORDS.length>34) WORDS.shift();
+}
+
+let bassAvg=0, beatPulse=0, lastBeat=-1;
+function detectBeat(bass,t){
+  bassAvg=bassAvg*0.94+bass*0.06;
+  if(bass>bassAvg*1.32 && bass>0.18 && t-lastBeat>0.16){ lastBeat=t; beatPulse=Math.min(1.6,beatPulse+0.9+bass); }
+}
+
+const NODES=72, ringPhase=new Float32Array(NODES);
+for(let i=0;i<NODES;i++) ringPhase[i]=Math.random()*Math.PI*2;
+let hueShift=0, wordTimer=0;
+
+function frame(t){
+  computeSpectrum(t);
+  const bass=band(30,140), lowMid=band(140,500), mid=band(500,2000), high=band(2000,8000);
+  const level=(bass*1.4+lowMid+mid+high)/4;
+
+  detectBeat(bass,t);
+  beatPulse *= Math.pow(0.9, STEP);
+  hueShift += (0.15+high*1.4)*STEP;
+
+  const anx=Math.min(1, bass*1.3+beatPulse*0.3);
+  const g=ctx.createRadialGradient(CX,CY,0,CX,CY,Math.max(W,H)*0.75);
+  g.addColorStop(0,`hsl(${248+anx*18}, ${42+anx*20}%, ${7+level*9}%)`);
+  g.addColorStop(0.55,`hsl(244, 38%, ${4+level*4}%)`);
+  g.addColorStop(1,"#04050b");
+  ctx.fillStyle=g; ctx.fillRect(0,0,W,H);
+  ctx.fillStyle="rgba(4,5,11,0.12)"; ctx.fillRect(0,0,W,H);
+
+  const baseR=Math.min(W,H)*0.17;
+  const pulseR=baseR*(1+beatPulse*0.22+level*0.18);
+
+  ctx.globalCompositeOperation="lighter";
+  const spawnN=Math.round((bass*6+level*3)*STEP);
+  for(let i=0;i<spawnN;i++) spawnStreak(level+beatPulse*0.4);
+  for(let i=STREAKS.length-1;i>=0;i--){
+    const p=STREAKS[i], px=p.x, py=p.y;
+    p.x+=p.vx*STEP; p.y+=p.vy*STEP;
+    p.vx*=Math.pow(0.985,STEP); p.vy*=Math.pow(0.985,STEP);
+    p.life-=0.012*STEP;
+    if(p.life<=0){ STREAKS.splice(i,1); continue; }
+    ctx.strokeStyle=`hsla(${(p.hue+hueShift)%360}, 90%, ${58+high*25}%, ${p.life*0.55})`;
+    ctx.lineWidth=p.w*(0.6+beatPulse*0.5);
+    ctx.beginPath(); ctx.moveTo(px,py); ctx.lineTo(p.x,p.y); ctx.stroke();
+  }
+
+  ctx.lineWidth=1.4;
+  let prevX=0,prevY=0,firstX=0,firstY=0;
+  for(let i=0;i<NODES;i++){
+    const a=(i/NODES)*Math.PI*2, bin=i/NODES;
+    const amp=band(60+bin*5000,60+bin*5000+260);
+    const r=pulseR+amp*baseR*1.7+Math.sin(t*2+ringPhase[i])*4;
+    const x=CX+Math.cos(a)*r, y=CY+Math.sin(a)*r;
+    const hue=(215+bin*150+hueShift)%360;
+    if(i===0){ firstX=x; firstY=y; }
+    else { ctx.strokeStyle=`hsla(${hue}, 88%, ${60+amp*30}%, 0.55)`; ctx.beginPath(); ctx.moveTo(prevX,prevY); ctx.lineTo(x,y); ctx.stroke(); }
+    const nodeR=1+amp*6+beatPulse*2;
+    ctx.fillStyle=`hsla(${hue}, 95%, 70%, ${0.5+amp})`;
+    ctx.beginPath(); ctx.arc(x,y,nodeR,0,Math.PI*2); ctx.fill();
+    if(i%6===0 && amp>0.25){
+      const j=(i+18+((t*3)|0))%NODES, aj=(j/NODES)*Math.PI*2, rj=pulseR+8;
+      ctx.strokeStyle=`hsla(${hue}, 90%, 65%, ${amp*0.4})`; ctx.lineWidth=0.8;
+      ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(CX+Math.cos(aj)*rj,CY+Math.sin(aj)*rj); ctx.stroke();
+      ctx.lineWidth=1.4;
+    }
+    prevX=x; prevY=y;
+  }
+  ctx.strokeStyle=`hsla(${(215+hueShift)%360}, 88%, 62%, 0.55)`;
+  ctx.beginPath(); ctx.moveTo(prevX,prevY); ctx.lineTo(firstX,firstY); ctx.stroke();
+
+  const coreR=pulseR*0.5;
+  const cg=ctx.createRadialGradient(CX,CY,0,CX,CY,coreR*2.4);
+  cg.addColorStop(0,`hsla(${(280+hueShift)%360}, 90%, 72%, ${0.5+beatPulse*0.3})`);
+  cg.addColorStop(0.4,`hsla(${(320+hueShift)%360}, 90%, 60%, 0.18)`);
+  cg.addColorStop(1,"rgba(0,0,0,0)");
+  ctx.fillStyle=cg; ctx.beginPath(); ctx.arc(CX,CY,coreR*2.4,0,Math.PI*2); ctx.fill();
+
+  ctx.globalCompositeOperation="screen";
+  wordTimer -= STEP;
+  if(wordTimer<=0){ spawnWord(); wordTimer=Math.max(8,46-level*60-beatPulse*20); }
+  ctx.textAlign="center"; ctx.textBaseline="middle";
+  for(let i=WORDS.length-1;i>=0;i--){
+    const w=WORDS[i];
+    w.life+=0.012*STEP;
+    w.y+=w.vy*(1+level*1.4)*STEP;
+    w.x+=(w.drift+Math.sin(w.life*6+w.jitter)*(high*3))*STEP;
+    const fade=Math.sin(Math.min(Math.PI,w.life*Math.PI));
+    if(w.life>=1||w.y<-40){ WORDS.splice(i,1); continue; }
+    ctx.font=`600 ${w.size}px -apple-system, "Segoe UI", Roboto, sans-serif`;
+    ctx.fillStyle=`hsla(${(w.hue+hueShift)%360}, 80%, 78%, ${fade*0.7})`;
+    ctx.shadowColor=`hsla(${(w.hue+hueShift)%360}, 90%, 60%, ${fade})`;
+    ctx.shadowBlur=12+beatPulse*16;
+    ctx.fillText(w.txt,w.x,w.y);
+  }
+  ctx.shadowBlur=0; ctx.globalCompositeOperation="source-over";
+
+  const vg=ctx.createRadialGradient(CX,CY,Math.min(W,H)*0.35,CX,CY,Math.max(W,H)*0.7);
+  vg.addColorStop(0,"rgba(0,0,0,0)"); vg.addColorStop(1,"rgba(2,3,8,0.55)");
+  ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
+
+  // ---- Intro title card (fades in/out over first seconds) ----
+  if(t < 4.2){
+    let a = t<0.4 ? t/0.4 : t<3.3 ? 1 : Math.max(0,(4.2-t)/0.9);
+    ctx.save();
+    ctx.textAlign="center"; ctx.textBaseline="middle";
+    ctx.shadowColor=`rgba(139,107,255,${0.5*a})`; ctx.shadowBlur=30;
+    const ts=Math.min(W*0.085,96);
+    ctx.font=`800 ${ts}px -apple-system, "Segoe UI", Roboto, sans-serif`;
+    const grad=ctx.createLinearGradient(CX-300,0,CX+300,0);
+    grad.addColorStop(0,`rgba(184,192,255,${a})`); grad.addColorStop(0.5,`rgba(139,107,255,${a})`); grad.addColorStop(1,`rgba(255,111,156,${a})`);
+    ctx.fillStyle=grad;
+    ctx.fillText("RACING", CX, CY-ts*0.55);
+    ctx.fillText("THOUGHTS", CX, CY+ts*0.55);
+    ctx.shadowBlur=0;
+    ctx.font=`500 ${ts*0.18}px -apple-system, "Segoe UI", Roboto, sans-serif`;
+    ctx.fillStyle=`rgba(154,160,216,${a*0.9})`;
+    ctx.fillText("an audio-reactive video", CX, CY+ts*1.25);
+    ctx.restore();
+  }
+  // ---- End fade to black ----
+  if(duration && t > duration-1.6){
+    ctx.fillStyle=`rgba(2,3,8,${Math.min(1,(t-(duration-1.6))/1.4)})`;
+    ctx.fillRect(0,0,W,H);
+  }
+}
+
+// ===== Harness API =====
+window.prepare = async (url) => {
+  setup();
+  const buf = await (await fetch(url)).arrayBuffer();
+  const AC = window.AudioContext || window.webkitAudioContext;
+  const actx = new AC();
+  const audioBuf = await actx.decodeAudioData(buf);
+  sampleRate = audioBuf.sampleRate;
+  duration = audioBuf.duration;
+  // mono mix
+  const ch = audioBuf.numberOfChannels;
+  const L = audioBuf.getChannelData(0);
+  pcm = new Float32Array(L.length);
+  if(ch>1){ const R=audioBuf.getChannelData(1); for(let i=0;i<L.length;i++) pcm[i]=(L[i]+R[i])*0.5; }
+  else pcm.set(L);
+  await actx.close();
+  // warm up a few frames so trails/state aren't empty at t=0
+  for(let i=0;i<3;i++) frame(0);
+  return { duration, sampleRate, fps: CFG.fps, frames: Math.ceil(duration*CFG.fps) };
+};
+
+window.renderFrame = (i) => {
+  frame(i / CFG.fps);
+  return canvas.toDataURL("image/jpeg", 0.92);
+};
+})();
+</script>
+</body>
+</html>
