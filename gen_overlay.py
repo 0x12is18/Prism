@@ -22,7 +22,7 @@ HEIGHT = 1920
 FPS    = 30
 SECS   = 10
 FRAMES = FPS * SECS
-OUTPUT = "/home/user/Prism/coffee_tv_overlay.webm"
+OUTPUT = "/home/user/Prism/coffee_tv_overlay.mp4"
 FFMPEG = imageio_ffmpeg.get_ffmpeg_exe()
 
 # ─── Anchor positions (% of 1080×1920, mapped from reference photo) ──────────
@@ -87,7 +87,8 @@ particles = [Particle() for _ in range(28)]
 
 # ─── Frame renderer ───────────────────────────────────────────────────────────
 def render_frame(t: int) -> np.ndarray:
-    canvas = Image.new('RGBA', (WIDTH, HEIGHT), (0, 0, 0, 0))
+    # Black background — use Screen blend mode in CapCut to make black transparent
+    canvas = Image.new('RGB', (WIDTH, HEIGHT), (0, 0, 0))
 
     # ── TV static ──
     tw = TV_R - TV_L
@@ -101,14 +102,14 @@ def render_frame(t: int) -> np.ndarray:
         bh = random.randint(2, 8)
         noise[by:by+bh] = np.clip(noise[by:by+bh].astype(np.int32) + 115, 0, 255).astype(np.uint8)
 
-    pix = np.empty((th, tw, 4), dtype=np.uint8)
+    pix = np.empty((th, tw, 3), dtype=np.uint8)
     pix[..., 0] = (noise * 0.50).astype(np.uint8)  # R
     pix[..., 1] = (noise * 0.68).astype(np.uint8)  # G
     pix[..., 2] = noise                              # B — blue-white CRT tint
-    pix[..., 3] = 178                                # ~70% opacity
-    canvas.paste(Image.fromarray(pix, 'RGBA'), (TV_L, TV_T))
+    canvas.paste(Image.fromarray(pix, 'RGB'), (TV_L, TV_T))
 
     # ── Steam (work in a cropped region for speed) ──
+    # Draw steam onto an RGBA crop, blur it, then composite onto the RGB canvas
     steam_crop = Image.new('RGBA', (SBW, SBH), (0, 0, 0, 0))
     draw = ImageDraw.Draw(steam_crop)
 
@@ -125,10 +126,10 @@ def render_frame(t: int) -> np.ndarray:
 
     steam_crop = steam_crop.filter(ImageFilter.GaussianBlur(radius=8))
 
-    # Composite steam crop back onto canvas
-    full_steam = Image.new('RGBA', (WIDTH, HEIGHT), (0, 0, 0, 0))
-    full_steam.paste(steam_crop, (_SB_L, _SB_T))
-    canvas = Image.alpha_composite(canvas, full_steam)
+    # Paste steam crop over the black canvas using alpha compositing
+    canvas_crop = canvas.crop((_SB_L, _SB_T, _SB_R, _SB_B)).convert('RGBA')
+    composited  = Image.alpha_composite(canvas_crop, steam_crop).convert('RGB')
+    canvas.paste(composited, (_SB_L, _SB_T))
 
     return np.array(canvas, dtype=np.uint8)
 
@@ -137,12 +138,13 @@ def render_frame(t: int) -> np.ndarray:
 cmd = [
     FFMPEG, '-y',
     '-f', 'rawvideo', '-vcodec', 'rawvideo',
-    '-pix_fmt', 'rgba', '-s', f'{WIDTH}x{HEIGHT}', '-r', str(FPS),
+    '-pix_fmt', 'rgb24', '-s', f'{WIDTH}x{HEIGHT}', '-r', str(FPS),
     '-i', 'pipe:0',
-    '-c:v', 'libvpx-vp9',
-    '-pix_fmt', 'yuva420p',
-    '-b:v', '0', '-crf', '22',
-    '-auto-alt-ref', '0',   # required for VP9 alpha
+    '-c:v', 'libx264',
+    '-pix_fmt', 'yuv420p',
+    '-crf', '28',          # higher = smaller file; 28 still looks great for an overlay
+    '-preset', 'fast',
+    '-movflags', '+faststart',
     OUTPUT,
 ]
 
