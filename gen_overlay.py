@@ -87,8 +87,8 @@ particles = [Particle() for _ in range(28)]
 
 # ─── Frame renderer ───────────────────────────────────────────────────────────
 def render_frame(t: int) -> np.ndarray:
-    # Black background — use Screen blend mode in CapCut to make black transparent
-    canvas = Image.new('RGB', (WIDTH, HEIGHT), (0, 0, 0))
+    # Chroma-key green background — remove in CapCut with Chroma Key tool
+    canvas = Image.new('RGB', (WIDTH, HEIGHT), (0, 255, 0))
 
     # ── TV static ──
     tw = TV_R - TV_L
