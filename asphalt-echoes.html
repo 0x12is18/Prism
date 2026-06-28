@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>Asphalt Echoes (Empty Space) — Music Video</title>
+<meta name="description" content="An audio-reactive cinematic music video for 'Asphalt Echoes (Empty Space)'." />
+<style>
+  :root { color-scheme: dark; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body {
+    width: 100%; height: 100%;
+    background: #04040a;
+    overflow: hidden;
+    font-family: "Helvetica Neue", Arial, sans-serif;
+    color: #fff;
+    -webkit-font-smoothing: antialiased;
+    user-select: none;
+  }
+  #stage { position: fixed; inset: 0; }
+  canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+
+  /* ----- Lyrics ----- */
+  #lyrics {
+    position: absolute;
+    left: 0; right: 0;
+    bottom: 14%;
+    text-align: center;
+    padding: 0 6vw;
+    pointer-events: none;
+    z-index: 5;
+  }
+  #lyric-main {
+    font-weight: 800;
+    font-size: clamp(26px, 5.2vw, 74px);
+    line-height: 1.08;
+    letter-spacing: 0.5px;
+    text-shadow: 0 0 18px rgba(0,0,0,0.55), 0 2px 6px rgba(0,0,0,0.6);
+    transition: opacity .45s ease, transform .45s ease, filter .45s ease;
+    will-change: opacity, transform;
+  }
+  #lyric-echo {
+    margin-top: 0.35em;
+    font-weight: 300;
+    font-style: italic;
+    font-size: clamp(15px, 2.6vw, 32px);
+    letter-spacing: 3px;
+    opacity: 0;
+    transition: opacity .6s ease, transform .6s ease;
+  }
+  .section-tag {
+    position: absolute;
+    top: 6%; left: 0; right: 0;
+    text-align: center;
+    font-size: clamp(11px, 1.5vw, 15px);
+    letter-spacing: 6px;
+    text-transform: uppercase;
+    font-weight: 600;
+    opacity: 0;
+    color: rgba(255,255,255,0.55);
+    transition: opacity .8s ease;
+    z-index: 5;
+    pointer-events: none;
+  }
+
+  /* ----- Title / Start screen ----- */
+  #start {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    text-align: center;
+    background: radial-gradient(ellipse at 50% 60%, rgba(20,10,40,0.55), rgba(2,2,8,0.92));
+    z-index: 20;
+    cursor: pointer;
+    transition: opacity 1s ease;
+    padding: 5vw;
+  }
+  #start h1 {
+    font-size: clamp(34px, 8vw, 110px);
+    font-weight: 900;
+    letter-spacing: 2px;
+    line-height: 0.98;
+    background: linear-gradient(180deg, #fff 0%, #ff5d8f 55%, #8a3bff 100%);
+    -webkit-background-clip: text; background-clip: text;
+    -webkit-text-fill-color: transparent;
+    filter: drop-shadow(0 0 26px rgba(255,93,143,0.35));
+  }
+  #start .sub {
+    margin-top: 0.6em;
+    font-size: clamp(12px, 2.4vw, 18px);
+    letter-spacing: 8px;
+    text-transform: uppercase;
+    color: rgba(255,255,255,0.6);
+    font-weight: 400;
+  }
+  #playbtn {
+    margin-top: 2.4em;
+    width: clamp(74px, 12vw, 104px);
+    height: clamp(74px, 12vw, 104px);
+    border-radius: 50%;
+    border: 2px solid rgba(255,255,255,0.85);
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(255,255,255,0.04);
+    box-shadow: 0 0 40px rgba(255,93,143,0.45), inset 0 0 20px rgba(138,59,255,0.25);
+    animation: pulse 2.4s ease-in-out infinite;
+  }
+  #playbtn::after {
+    content: "";
+    margin-left: 6px;
+    border-left: clamp(20px,3.4vw,28px) solid #fff;
+    border-top: clamp(13px,2.2vw,18px) solid transparent;
+    border-bottom: clamp(13px,2.2vw,18px) solid transparent;
+  }
+  #playbtn .tip {
+    position: absolute; bottom: -2.6em;
+    font-size: 12px; letter-spacing: 3px; color: rgba(255,255,255,0.5);
+    text-transform: uppercase; white-space: nowrap;
+  }
+  @keyframes pulse {
+    0%,100% { transform: scale(1); box-shadow: 0 0 40px rgba(255,93,143,0.45), inset 0 0 20px rgba(138,59,255,0.25); }
+    50% { transform: scale(1.06); box-shadow: 0 0 70px rgba(255,93,143,0.7), inset 0 0 30px rgba(138,59,255,0.4); }
+  }
+  #start.hidden { opacity: 0; pointer-events: none; }
+
+  /* ----- Bottom progress / controls ----- */
+  #hud {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    padding: 18px 22px;
+    display: flex; align-items: center; gap: 14px;
+    z-index: 15;
+    opacity: 0;
+    transition: opacity .5s ease;
+    background: linear-gradient(0deg, rgba(0,0,0,0.45), transparent);
+  }
+  #stage:hover #hud, #hud.show { opacity: 1; }
+  #hud .pp {
+    cursor: pointer; font-size: 18px; width: 34px; text-align: center;
+    color: #fff; opacity: .85;
+  }
+  #bar { flex: 1; height: 4px; border-radius: 4px; background: rgba(255,255,255,0.18); cursor: pointer; position: relative; }
+  #fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0%; border-radius: 4px;
+    background: linear-gradient(90deg, #8a3bff, #ff5d8f); box-shadow: 0 0 10px rgba(255,93,143,0.7); }
+  #time { font-variant-numeric: tabular-nums; font-size: 12px; letter-spacing: 1px; color: rgba(255,255,255,0.7); min-width: 84px; text-align: right; }
+  #replay { display:none; }
+  @media (max-width:520px){ #lyrics{ bottom: 18%; } }
+</style>
+</head>
+<body>
+<div id="stage">
+  <canvas id="bg"></canvas>
+
+  <div class="section-tag" id="sectionTag"></div>
+
+  <div id="lyrics">
+    <div id="lyric-main"></div>
+    <div id="lyric-echo"></div>
+  </div>
+
+  <div id="hud">
+    <div class="pp" id="pp">❚❚</div>
+    <div id="bar"><div id="fill"></div></div>
+    <div id="time">0:00 / 0:00</div>
+  </div>
+
+  <div id="start">
+    <h1>ASPHALT<br>ECHOES</h1>
+    <div class="sub">Empty Space</div>
+    <div id="playbtn"><span class="tip">tap to drive</span></div>
+  </div>
+</div>
+
+<audio id="audio" src="asphalt-echoes.mp3" preload="auto"></audio>
+
+<script>
+"use strict";
+(function(){
+  const cv = document.getElementById('bg');
+  const ctx = cv.getContext('2d', { alpha:false });
+  const audio = document.getElementById('audio');
+  const startEl = document.getElementById('start');
+  const lyricMain = document.getElementById('lyric-main');
+  const lyricEcho = document.getElementById('lyric-echo');
+  const sectionTag = document.getElementById('sectionTag');
+  const hud = document.getElementById('hud');
+  const ppBtn = document.getElementById('pp');
+  const bar = document.getElementById('bar');
+  const fill = document.getElementById('fill');
+  const timeEl = document.getElementById('time');
+
+  let W = 0, H = 0, DPR = 1, cx = 0, horizonY = 0;
+  function resize(){
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth; H = window.innerHeight;
+    cv.width = Math.floor(W * DPR); cv.height = Math.floor(H * DPR);
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    cx = W/2;
+    horizonY = H * 0.46;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  /* ================= THEMES ================= *
+   * Each section gets a mood palette. The renderer lerps the live
+   * palette toward the active section's target every frame for smooth
+   * cinematic transitions that follow the song's emotional arc.       */
+  function rgb(r,g,b){ return {r,g,b}; }
+  const THEMES = {
+    intro:      { skyTop:rgb(6,6,16),    skyBot:rgb(40,12,26),   sun:rgb(150,40,70),   grid:rgb(120,40,80),  accent:rgb(255,90,120), road:rgb(255,120,140), speed:0.55, rain:0,   stars:0.6, gridA:0.25, sunY:0.0 },
+    verse1:     { skyTop:rgb(14,4,8),    skyBot:rgb(70,10,18),   sun:rgb(220,50,40),   grid:rgb(200,40,40),  accent:rgb(255,70,60),  road:rgb(255,120,90),  speed:1.35, rain:0,   stars:0.5, gridA:0.5,  sunY:0.0 },
+    chorus:     { skyTop:rgb(20,6,40),   skyBot:rgb(90,18,90),   sun:rgb(255,70,150),  grid:rgb(255,60,200), accent:rgb(80,230,255), road:rgb(120,240,255), speed:1.7,  rain:0,   stars:0.7, gridA:0.85, sunY:0.0 },
+    post:       { skyTop:rgb(18,6,40),   skyBot:rgb(80,18,90),   sun:rgb(255,80,160),  grid:rgb(230,60,200), accent:rgb(90,220,255), road:rgb(120,230,255), speed:1.4,  rain:0,   stars:0.7, gridA:0.7,  sunY:0.0 },
+    verse2:     { skyTop:rgb(6,10,28),   skyBot:rgb(20,30,70),   sun:rgb(70,120,220),  grid:rgb(70,120,230), accent:rgb(120,200,255),road:rgb(150,210,255), speed:1.3,  rain:1,   stars:0.4, gridA:0.45, sunY:0.0 },
+    pre:        { skyTop:rgb(12,8,34),   skyBot:rgb(50,20,90),   sun:rgb(150,80,230),  grid:rgb(150,70,240), accent:rgb(180,130,255),road:rgb(190,160,255), speed:1.45, rain:0.5, stars:0.5, gridA:0.6,  sunY:0.0 },
+    chorus2:    { skyTop:rgb(24,6,46),   skyBot:rgb(110,20,110), sun:rgb(255,60,160),  grid:rgb(255,60,210), accent:rgb(90,240,255), road:rgb(120,245,255), speed:1.85, rain:0,   stars:0.8, gridA:1.0,  sunY:0.0 },
+    bridge:     { skyTop:rgb(4,8,26),    skyBot:rgb(10,18,50),   sun:rgb(60,90,180),   grid:rgb(40,70,150),  accent:rgb(130,170,255),road:rgb(120,160,230), speed:0.5,  rain:0,   stars:1.0, gridA:0.12, sunY:0.0 },
+    build:      { skyTop:rgb(16,8,34),   skyBot:rgb(70,30,90),   sun:rgb(220,120,180), grid:rgb(200,90,180), accent:rgb(255,180,150),road:rgb(255,200,170), speed:1.1,  rain:0,   stars:0.8, gridA:0.55, sunY:0.0 },
+    finalch:    { skyTop:rgb(30,10,40),  skyBot:rgb(150,50,90),  sun:rgb(255,140,90),  grid:rgb(255,90,150), accent:rgb(120,240,255),road:rgb(255,200,150), speed:1.75, rain:0,   stars:0.9, gridA:0.95, sunY:0.0 },
+    outro:      { skyTop:rgb(40,22,40),  skyBot:rgb(255,150,90), sun:rgb(255,200,120), grid:rgb(255,170,120), accent:rgb(255,225,180),road:rgb(255,220,180), speed:0.7,  rain:0,   stars:0.5, gridA:0.3,  sunY:0.04, home:1 },
+    end:        { skyTop:rgb(60,40,60),  skyBot:rgb(255,200,160),sun:rgb(255,235,200), grid:rgb(255,210,170), accent:rgb(255,245,220),road:rgb(255,235,200), speed:0.3,  rain:0,   stars:0.3, gridA:0.15, sunY:0.12, home:1 },
+  };
+
+  /* ================= TIMELINE =================
+   * Section schedule (seconds). Calibrated to the ~270s master, then
+   * rescaled at runtime to the audio's real duration so sync holds even
+   * if the final mix length differs.                                   */
+  const REF_DUR = 270;
+  const SECTIONS = [
+    { t:0,    name:'INTRO',        theme:'intro'   },
+    { t:12,   name:'VERSE I',      theme:'verse1'  },
+    { t:40,   name:'CHORUS',       theme:'chorus'  },
+    { t:56,   name:'POST-CHORUS',  theme:'post'    },
+    { t:70,   name:'VERSE II',     theme:'verse2'  },
+    { t:98,   name:'PRE-CHORUS',   theme:'pre'     },
+    { t:112,  name:'CHORUS',       theme:'chorus2' },
+    { t:132,  name:'BRIDGE',       theme:'bridge'  },
+    { t:182,  name:'BUILD',        theme:'build'   },
+    { t:205,  name:'FINAL CHORUS', theme:'finalch' },
+    { t:230,  name:'OUTRO',        theme:'outro'   },
+    { t:258,  name:'',             theme:'end'     },
+  ];
+
+  /* ================= LYRICS =================
+   * t = start (sec @ REF_DUR), main line, echo line (ghosted). */
+  const LYRICS = [
+    { t:3,   main:"another night on these streets" },
+    { t:13,  main:"Headlights cutting through the black" },
+    { t:17,  main:"no turning back, the feeling's ill" },
+    { t:21,  main:"Pushing ninety on the dash" },
+    { t:25,  main:"a reckless crash to feel something real" },
+    { t:29,  main:"Heart is numb, my soul is broke" },
+    { t:32,  main:"choking on the words I never spoke" },
+    { t:35,  main:"I floor the gas to kill the ache" },
+    { t:38,  main:"another chance I won't take" },
+    { t:41,  main:"Lost in this high-speed chase" },
+    { t:45,  main:"A fleeting taste of adrenaline", echo:"empty space" },
+    { t:49,  main:"in this empty space", echo:"in this empty space" },
+    { t:57,  main:"Lost in this high-speed chase" },
+    { t:61,  main:"A fleeting taste of adrenaline", echo:"empty space" },
+    { t:65,  main:"in this empty space", echo:"empty space" },
+    { t:71,  main:"Streetlights blur into a line" },
+    { t:75,  main:"every sign, another ghost I left behind" },
+    { t:79,  main:"Windows down against the rain" },
+    { t:83,  main:"trying to wash away the stain" },
+    { t:87,  main:"Every mile another lie" },
+    { t:90,  main:"every crossroad asking why" },
+    { t:93,  main:"Thought I could outrun the past" },
+    { t:96,  main:"but memories are built to last" },
+    { t:99,  main:"The lights are fading in the rear" },
+    { t:102, main:"but every shadow brings you near" },
+    { t:105, main:"The engine screams beneath my feet" },
+    { t:108, main:"still can't drown the heartbeat" },
+    { t:113, main:"Lost in this high-speed chase" },
+    { t:117, main:"A fleeting taste of adrenaline", echo:"empty space" },
+    { t:121, main:"in this empty space", echo:"still the same place" },
+    { t:124, main:"Running from the wreckage inside" },
+    { t:128, main:"searching for a version of myself", echo:"that never died" },
+    { t:133, main:"Now the road is getting thin" },
+    { t:139, main:"and the silence settles in" },
+    { t:145, main:"All the miles I put between" },
+    { t:151, main:"couldn't erase what I've seen" },
+    { t:157, main:"I kept looking for a sign" },
+    { t:162, main:"some red light to stop time" },
+    { t:167, main:"but the truth was riding shotgun" },
+    { t:173, main:"waiting for me all along" },
+    { t:183, main:"No more racing through the dark" },
+    { t:188, main:"no more trying to outrun the spark" },
+    { t:193, main:"Every scar and every flame" },
+    { t:198, main:"led me back to my own name" },
+    { t:206, main:"Lost in this high-speed chase" },
+    { t:210, main:"A fleeting taste of adrenaline in this empty space" },
+    { t:216, main:"But the road keeps feeling alone" },
+    { t:221, main:"and I'm finally learning how to drive back home", echo:"drive alone" },
+    { t:231, main:"Another night on these streets" },
+    { t:237, main:"but I don't need the speed" },
+    { t:242, main:"My breath's quiet underneath" },
+    { t:247, main:"and I'm finally hearing me" },
+    { t:253, main:"", echo:"no longer empty" },
+    { t:260, main:"home", echo:"home" },
+  ];
+
+  /* ================= AUDIO ANALYSIS ================= */
+  let actx, analyser, freq, srcNode, audioReady=false;
+  let bass=0, mid=0, treble=0, level=0;
+  let beat=0, beatEnergyAvg=0, beatHold=0;
+  function initAudio(){
+    if(audioReady) return;
+    actx = new (window.AudioContext||window.webkitAudioContext)();
+    srcNode = actx.createMediaElementSource(audio);
+    analyser = actx.createAnalyser();
+    analyser.fftSize = 1024;
+    analyser.smoothingTimeConstant = 0.8;
+    freq = new Uint8Array(analyser.frequencyBinCount);
+    srcNode.connect(analyser);
+    analyser.connect(actx.destination);
+    audioReady = true;
+  }
+  function readAudio(){
+    if(!audioReady){ bass=mid=treble=level=0; return; }
+    analyser.getByteFrequencyData(freq);
+    const n = freq.length;
+    let b=0,m=0,t=0;
+    const bEnd=Math.floor(n*0.08), mEnd=Math.floor(n*0.4);
+    for(let i=0;i<bEnd;i++) b+=freq[i];
+    for(let i=bEnd;i<mEnd;i++) m+=freq[i];
+    for(let i=mEnd;i<n;i++) t+=freq[i];
+    b/=(bEnd*255); m/=((mEnd-bEnd)*255); t/=((n-mEnd)*255);
+    // smooth
+    bass += (b-bass)*0.35; mid += (m-mid)*0.3; treble += (t-treble)*0.3;
+    level += (((bass*1.4+mid+treble*0.6)/3)-level)*0.3;
+    // simple beat detection on bass
+    beatEnergyAvg += (bass - beatEnergyAvg)*0.05;
+    if(bass > beatEnergyAvg*1.32 && bass>0.18 && beatHold<=0){
+      beat = 1; beatHold = 8;
+    }
+    beatHold--;
+    beat *= 0.86;
+  }
+
+  /* ================= ENTITIES ================= */
+  // Stars
+  const stars = [];
+  for(let i=0;i<260;i++){
+    stars.push({ x:Math.random(), y:Math.random()*0.5, z:Math.random(), tw:Math.random()*Math.PI*2 });
+  }
+  // Road dashes (center line) + side reflectors
+  const dashes = [];
+  for(let i=0;i<22;i++) dashes.push({ z: i/22 });
+  const sideLights = [];
+  for(let i=0;i<26;i++) sideLights.push({ z: Math.random(), side: i%2?1:-1 });
+  // Rain
+  const rain = [];
+  for(let i=0;i<240;i++) rain.push({ x:Math.random(), y:Math.random(), len:0.02+Math.random()*0.04, sp:0.6+Math.random()*0.9 });
+  // Build-section converging particles ("reverse guitar textures")
+  const sparks = [];
+  for(let i=0;i<90;i++) sparks.push({ a:Math.random()*Math.PI*2, r:Math.random(), sp:0.3+Math.random()*0.7 });
+
+  /* ================= LIVE PALETTE ================= */
+  const live = JSON.parse(JSON.stringify(THEMES.intro));
+  function lerp(a,b,f){ return a+(b-a)*f; }
+  function lerpRGB(c, t, f){ c.r=lerp(c.r,t.r,f); c.g=lerp(c.g,t.g,f); c.b=lerp(c.b,t.b,f); }
+  function css(c,a){ return 'rgba('+(c.r|0)+','+(c.g|0)+','+(c.b|0)+','+(a===undefined?1:a)+')'; }
+
+  let scale = 1; // ref->actual time scaling
+  function currentSection(t){
+    let s = SECTIONS[0];
+    for(const sec of SECTIONS){ if(t >= sec.t*scale) s = sec; else break; }
+    return s;
+  }
+
+  let roadOffset = 0, gridOffset = 0, homeGlow = 0, flash = 0;
+
+  /* ================= LYRIC DISPLAY ================= */
+  let curLyricIdx = -1;
+  function updateLyrics(t){
+    let idx = -1;
+    for(let i=0;i<LYRICS.length;i++){ if(t >= LYRICS[i].t*scale) idx = i; else break; }
+    if(idx !== curLyricIdx){
+      curLyricIdx = idx;
+      const L = idx>=0 ? LYRICS[idx] : null;
+      // main
+      lyricMain.style.opacity = 0;
+      lyricMain.style.transform = 'translateY(10px) scale(0.985)';
+      setTimeout(()=>{
+        if(curLyricIdx!==idx) return;
+        lyricMain.textContent = L && L.main ? L.main : '';
+        lyricMain.style.opacity = L && L.main ? 1 : 0;
+        lyricMain.style.transform = 'translateY(0) scale(1)';
+      }, 180);
+      // echo
+      lyricEcho.style.opacity = 0;
+      setTimeout(()=>{
+        if(curLyricIdx!==idx) return;
+        lyricEcho.textContent = L && L.echo ? '( '+L.echo+' )' : '';
+        lyricEcho.style.opacity = L && L.echo ? 0.7 : 0;
+      }, 320);
+    }
+  }
+
+  let curSecName = null;
+  function updateSectionTag(name){
+    if(name===curSecName) return;
+    curSecName = name;
+    if(name){
+      sectionTag.textContent = name;
+      sectionTag.style.opacity = 1;
+      clearTimeout(sectionTag._to);
+      sectionTag._to = setTimeout(()=>{ sectionTag.style.opacity = 0; }, 3200);
+    } else {
+      sectionTag.style.opacity = 0;
+    }
+  }
+
+  /* ================= RENDER ================= */
+  function project(z){
+    // z in (0,1]: 0=horizon (far), 1=viewer (near)
+    const y = horizonY + (H - horizonY) * (z*z);
+    const sc = z*z;
+    return { y, sc };
+  }
+
+  function draw(dt, t){
+    readAudio();
+    const sec = currentSection(t);
+    const target = THEMES[sec.theme];
+    const f = Math.min(1, dt*1.2);
+    lerpRGB(live.skyTop, target.skyTop, f);
+    lerpRGB(live.skyBot, target.skyBot, f);
+    lerpRGB(live.sun, target.sun, f);
+    lerpRGB(live.grid, target.grid, f);
+    lerpRGB(live.accent, target.accent, f);
+    lerpRGB(live.road, target.road, f);
+    live.speed = lerp(live.speed, target.speed, f);
+    live.rain = lerp(live.rain, target.rain, f);
+    live.stars = lerp(live.stars, target.stars, f);
+    live.gridA = lerp(live.gridA, target.gridA, f);
+    live.sunY = lerp(live.sunY, target.sunY||0, f);
+    homeGlow = lerp(homeGlow, target.home?1:0, f*0.6);
+
+    const energy = 0.35 + level*1.1 + beat*0.4;
+    const spd = live.speed * (0.6 + energy*0.9);
+
+    // ---- Sky ----
+    const g = ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0, css(live.skyTop));
+    g.addColorStop(0.55, css({r:(live.skyTop.r+live.skyBot.r)/2,g:(live.skyTop.g+live.skyBot.g)/2,b:(live.skyTop.b+live.skyBot.b)/2}));
+    g.addColorStop(1, css(live.skyBot));
+    ctx.fillStyle = g; ctx.fillRect(0,0,W,H);
+
+    // ---- Stars ----
+    if(live.stars>0.02){
+      ctx.save();
+      for(const s of stars){
+        s.tw += dt*2;
+        const a = (0.3+0.7*Math.abs(Math.sin(s.tw+s.z*6))) * live.stars * (0.4+treble*1.2);
+        const sx = s.x*W, sy = s.y*horizonY;
+        const r = 0.4 + s.z*1.4;
+        ctx.fillStyle = 'rgba(255,255,255,'+a.toFixed(3)+')';
+        ctx.fillRect(sx, sy, r, r);
+      }
+      ctx.restore();
+    }
+
+    // ---- Sun / Moon (synthwave) ----
+    const sunR = Math.min(W,H) * (0.16 + bass*0.05);
+    const sunCY = horizonY - sunR*0.15 + live.sunY*H*1.2 - homeGlow*sunR*0.1;
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx, sunCY, sunR*1.5, 0, Math.PI*2);
+    const halo = ctx.createRadialGradient(cx,sunCY,sunR*0.3, cx,sunCY,sunR*1.5);
+    halo.addColorStop(0, css(live.sun, 0.55+beat*0.3));
+    halo.addColorStop(1, css(live.sun, 0));
+    ctx.fillStyle = halo; ctx.fill();
+    // disc with scanline cutouts in lower half
+    ctx.beginPath(); ctx.arc(cx, sunCY, sunR, 0, Math.PI*2); ctx.clip();
+    const sg = ctx.createLinearGradient(0, sunCY-sunR, 0, sunCY+sunR);
+    sg.addColorStop(0, css({r:Math.min(255,live.sun.r+40),g:Math.min(255,live.sun.g+40),b:Math.min(255,live.sun.b+40)}));
+    sg.addColorStop(1, css(live.sun));
+    ctx.fillStyle = sg; ctx.fillRect(cx-sunR, sunCY-sunR, sunR*2, sunR*2);
+    ctx.globalCompositeOperation = 'destination-out';
+    let yy = sunCY + sunR*0.18;
+    let bandH = sunR*0.06, gap = sunR*0.05;
+    while(yy < sunCY+sunR){
+      ctx.fillRect(cx-sunR, yy, sunR*2, bandH);
+      yy += bandH+gap; bandH *= 1.25; gap *= 1.18;
+    }
+    ctx.restore();
+
+    // ---- Ground gradient (below horizon) ----
+    const gg = ctx.createLinearGradient(0,horizonY,0,H);
+    gg.addColorStop(0, css(live.skyBot, 0.9));
+    gg.addColorStop(1, css({r:live.skyBot.r*0.2,g:live.skyBot.g*0.2,b:live.skyBot.b*0.25}));
+    ctx.fillStyle = gg; ctx.fillRect(0,horizonY,W,H-horizonY);
+
+    // ---- Synthwave floor grid ----
+    if(live.gridA>0.02){
+      ctx.save();
+      ctx.strokeStyle = css(live.grid, live.gridA*(0.5+beat*0.5));
+      ctx.lineWidth = 1.2;
+      ctx.shadowColor = css(live.grid, 0.8); ctx.shadowBlur = 8;
+      gridOffset = (gridOffset + spd*dt*0.6) % 1;
+      // horizontal lines
+      for(let i=0;i<18;i++){
+        let z = (i + gridOffset)/18;
+        const p = project(z);
+        ctx.globalAlpha = live.gridA * Math.min(1, z*2.2);
+        ctx.beginPath(); ctx.moveTo(0,p.y); ctx.lineTo(W,p.y); ctx.stroke();
+      }
+      ctx.globalAlpha = live.gridA*0.8;
+      // vertical converging lines
+      const vp = cx;
+      for(let i=-10;i<=10;i++){
+        const spread = i* (W*0.12);
+        ctx.beginPath();
+        ctx.moveTo(vp, horizonY);
+        ctx.lineTo(cx + spread, H);
+        ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // ---- Road ----
+    roadOffset = (roadOffset + spd*dt*0.9) % 1;
+    const roadHalfNear = W*0.42, roadHalfFar = W*0.012;
+    ctx.save();
+    // tarmac
+    ctx.beginPath();
+    ctx.moveTo(cx-roadHalfFar, horizonY);
+    ctx.lineTo(cx+roadHalfFar, horizonY);
+    ctx.lineTo(cx+roadHalfNear, H);
+    ctx.lineTo(cx-roadHalfNear, H);
+    ctx.closePath();
+    const rg = ctx.createLinearGradient(0,horizonY,0,H);
+    rg.addColorStop(0,'rgba(10,8,16,0.0)');
+    rg.addColorStop(0.25,'rgba(8,6,14,0.85)');
+    rg.addColorStop(1,'rgba(4,3,8,0.96)');
+    ctx.fillStyle = rg; ctx.fill();
+    ctx.clip();
+    // road edge glow lines
+    ctx.strokeStyle = css(live.road, 0.7+beat*0.3);
+    ctx.lineWidth = 2.4; ctx.shadowColor = css(live.road,0.9); ctx.shadowBlur = 14;
+    ctx.beginPath(); ctx.moveTo(cx-roadHalfFar,horizonY); ctx.lineTo(cx-roadHalfNear,H); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx+roadHalfFar,horizonY); ctx.lineTo(cx+roadHalfNear,H); ctx.stroke();
+    // center dashes
+    ctx.shadowBlur = 16; ctx.shadowColor = css(live.accent,0.9);
+    for(const d of dashes){
+      d.z = (d.z + spd*dt*0.5) % 1;
+      const z = d.z;
+      if(z<0.02) continue;
+      const p = project(z);
+      const w = lerp(1.5, 16, z*z);
+      const h = lerp(2, 46, z*z);
+      ctx.fillStyle = css(live.accent, Math.min(1, z*2));
+      ctx.fillRect(cx - w/2, p.y - h, w, h);
+    }
+    ctx.restore();
+
+    // ---- Side streetlights streaking past (motion blur lines) ----
+    ctx.save();
+    ctx.globalCompositeOperation = 'lighter';
+    for(const s of sideLights){
+      s.z = (s.z + spd*dt*0.55) % 1;
+      const z = s.z;
+      if(z<0.03) continue;
+      const p = project(z);
+      const off = (W*0.5)*z*z * s.side + s.side*roadHalfFar;
+      const x = cx + off;
+      const blur = lerp(2, 60, z*z) * (0.5+spd*0.4);
+      const w = lerp(0.8, 6, z*z);
+      const col = z>0.5 ? live.road : live.accent;
+      const grd = ctx.createLinearGradient(x, p.y, x, p.y - blur);
+      grd.addColorStop(0, css(col, Math.min(1, z*1.6)));
+      grd.addColorStop(1, css(col, 0));
+      ctx.fillStyle = grd;
+      ctx.fillRect(x - w/2, p.y - blur, w, blur);
+    }
+    ctx.restore();
+
+    // ---- Build-section converging sparks ("reverse guitar textures") ----
+    if(sec.theme==='build' || sec.theme==='finalch'){
+      ctx.save();
+      ctx.globalCompositeOperation='lighter';
+      for(const s of sparks){
+        s.r -= dt*s.sp*0.4*(0.6+energy);
+        if(s.r<0){ s.r=1; s.a=Math.random()*Math.PI*2; }
+        const rr = s.r;
+        const x = cx + Math.cos(s.a)*rr*W*0.6;
+        const y = sunCY + Math.sin(s.a)*rr*horizonY*0.7;
+        const a = (1-rr)*0.6*(0.4+treble);
+        ctx.fillStyle = css(live.accent, a);
+        const sz = (1-rr)*3+0.5;
+        ctx.fillRect(x,y,sz,sz);
+      }
+      ctx.restore();
+    }
+
+    // ---- Rain ----
+    if(live.rain>0.05){
+      ctx.save();
+      ctx.strokeStyle = 'rgba(170,200,255,'+(0.22*live.rain).toFixed(3)+')';
+      ctx.lineWidth = 1;
+      for(const r of rain){
+        r.y += dt*r.sp; if(r.y>1){ r.y-=1; r.x=Math.random(); }
+        const x = r.x*W, y=r.y*H;
+        ctx.beginPath(); ctx.moveTo(x,y); ctx.lineTo(x-6, y+r.len*H); ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // ---- Home glow at vanishing point (outro) ----
+    if(homeGlow>0.02){
+      ctx.save();
+      ctx.globalCompositeOperation='lighter';
+      const hr = Math.min(W,H)*(0.12+0.05*Math.sin(t*1.5))*homeGlow;
+      const hgg = ctx.createRadialGradient(cx,horizonY,0,cx,horizonY,hr*3);
+      hgg.addColorStop(0,'rgba(255,225,170,'+(0.5*homeGlow).toFixed(3)+')');
+      hgg.addColorStop(1,'rgba(255,200,140,0)');
+      ctx.fillStyle=hgg;
+      ctx.fillRect(cx-hr*3,horizonY-hr*3,hr*6,hr*6);
+      ctx.restore();
+    }
+
+    // ---- Headlight wash + speed vignette ----
+    ctx.save();
+    const hl = ctx.createRadialGradient(cx, H*0.92, 0, cx, H*0.92, H*0.7);
+    hl.addColorStop(0,'rgba(255,255,255,'+(0.05+beat*0.05).toFixed(3)+')');
+    hl.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.globalCompositeOperation='lighter';
+    ctx.fillStyle=hl; ctx.fillRect(0,0,W,H);
+    ctx.restore();
+
+    // ---- Beat flash ----
+    flash = Math.max(flash*0.9, beat>0.6 && (sec.theme.indexOf('chorus')>=0||sec.theme==='finalch'||sec.theme==='verse1') ? 0.12 : 0);
+    if(flash>0.01){ ctx.fillStyle='rgba(255,255,255,'+flash.toFixed(3)+')'; ctx.fillRect(0,0,W,H); }
+
+    // ---- Vignette ----
+    const vg = ctx.createRadialGradient(cx,H*0.5,H*0.2, cx,H*0.5,H*0.85);
+    vg.addColorStop(0,'rgba(0,0,0,0)');
+    vg.addColorStop(1,'rgba(0,0,0,0.55)');
+    ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
+
+    // dynamic lyric scale with energy
+    lyricMain.style.filter = 'drop-shadow(0 0 '+(8+level*26).toFixed(0)+'px '+css(live.accent,0.5)+')';
+  }
+
+  /* ================= LOOP ================= */
+  let last = performance.now();
+  let running = false;
+  function frame(now){
+    const dt = Math.min(0.05,(now-last)/1000); last = now;
+    const t = audio.currentTime;
+    if(running){
+      updateLyrics(t);
+      updateSectionTag(currentSection(t).name);
+    }
+    draw(dt, t);
+    // hud
+    if(audio.duration){
+      fill.style.width = (t/audio.duration*100)+'%';
+      timeEl.textContent = fmt(t)+' / '+fmt(audio.duration);
+    }
+    requestAnimationFrame(frame);
+  }
+  function fmt(s){ s=Math.max(0,s|0); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+
+  /* ================= CONTROLS ================= */
+  function begin(){
+    initAudio();
+    if(actx.state==='suspended') actx.resume();
+    if(audio.duration && isFinite(audio.duration)) scale = audio.duration / REF_DUR;
+    audio.play();
+    running = true;
+    startEl.classList.add('hidden');
+    hud.classList.add('show');
+    setTimeout(()=>hud.classList.remove('show'), 2500);
+  }
+  audio.addEventListener('loadedmetadata', ()=>{
+    if(audio.duration && isFinite(audio.duration)) scale = audio.duration / REF_DUR;
+  });
+  startEl.addEventListener('click', begin);
+
+  function toggle(){
+    if(!audioReady) { begin(); return; }
+    if(audio.paused){ audio.play(); running=true; ppBtn.textContent='❚❚'; }
+    else { audio.pause(); running=false; ppBtn.textContent='►'; }
+  }
+  ppBtn.addEventListener('click', (e)=>{ e.stopPropagation(); toggle(); });
+  cv.addEventListener('click', ()=>{ if(audioReady) toggle(); });
+  document.addEventListener('keydown', e=>{ if(e.code==='Space'){ e.preventDefault(); toggle(); } });
+  bar.addEventListener('click', (e)=>{
+    if(!audio.duration) return;
+    const r = bar.getBoundingClientRect();
+    audio.currentTime = (e.clientX-r.left)/r.width*audio.duration;
+  });
+  audio.addEventListener('ended', ()=>{ running=false; ppBtn.textContent='►'; });
+
+  requestAnimationFrame(frame);
+})();
+</script>
+</body>
+</html>
