@@ -1,0 +1,571 @@
+<meta charset="UTF-8" />
+<title>We Were the '80s — Music Video</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content="A synthwave slideshow music video for 'We Were the '80s', synced to the lyrics." />
+<style>
+  :root {
+    --bg: #0a0518;
+    --panel: rgba(10, 5, 24, 0.72);
+    --fg: #f5f0ff;
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0; height: 100%;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+    overflow: hidden;
+  }
+  #app {
+    position: relative;
+    width: 100vw; height: 100vh;
+    display: flex; flex-direction: column;
+    background: #000;
+  }
+
+  /* ---------- Stage ---------- */
+  #stage {
+    position: relative;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+  #stage svg.scene {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    opacity: 0;
+    transition: opacity 900ms ease;
+  }
+  #stage svg.scene.active { opacity: 1; }
+
+  .grain {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    background-image: repeating-linear-gradient(0deg, rgba(255,255,255,0.035) 0px, rgba(255,255,255,0.035) 1px, transparent 1px, transparent 3px);
+    mix-blend-mode: overlay;
+    opacity: 0.5;
+  }
+  .vignette {
+    position: absolute; inset: 0;
+    pointer-events: none;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0) 45%, rgba(0,0,0,0.55) 100%);
+  }
+
+  /* ---------- Title splash ---------- */
+  #splash {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 28px;
+    background: radial-gradient(ellipse at 50% 30%, #2a0a3d 0%, #0a0518 70%);
+    z-index: 50;
+    text-align: center;
+    padding: 24px;
+  }
+  #splash h1 {
+    margin: 0;
+    font-size: clamp(2rem, 7vw, 4.5rem);
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    background: linear-gradient(180deg, #fff 0%, #ff9de6 45%, #ff2fd0 100%);
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    text-shadow: 0 0 40px rgba(255, 47, 208, 0.5);
+    font-weight: 800;
+  }
+  #splash p { margin: 0; opacity: 0.75; font-size: clamp(0.85rem, 2vw, 1.05rem); max-width: 34em; }
+  #playBtn {
+    font: inherit; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+    cursor: pointer; border: 2px solid #ff2fd0; color: #fff;
+    background: linear-gradient(90deg, #ff2fd0, #7a5cff);
+    padding: 16px 42px; border-radius: 999px; font-size: 1.1rem;
+    box-shadow: 0 0 30px rgba(255,47,208,0.55);
+  }
+  #playBtn:hover { filter: brightness(1.15); }
+  #splash.hidden { display: none; }
+
+  /* ---------- Caption ---------- */
+  #captionWrap {
+    position: absolute; left: 0; right: 0; bottom: 0;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 0 5vw 3vh;
+    pointer-events: none;
+    z-index: 10;
+  }
+  #section-badge {
+    font-size: 0.7rem; letter-spacing: 0.25em; text-transform: uppercase;
+    color: #ffcf3a; opacity: 0.85; margin-bottom: 10px;
+    text-shadow: 0 0 10px rgba(255,207,58,0.6);
+  }
+  #caption {
+    font-size: clamp(1.3rem, 4.6vw, 3rem);
+    font-weight: 800;
+    text-align: center;
+    line-height: 1.25;
+    max-width: 22ch;
+    color: #fff;
+    text-shadow: 0 0 12px rgba(0,0,0,0.9), 0 0 28px currentColor, 0 2px 3px rgba(0,0,0,0.8);
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+    transition: opacity 260ms ease, transform 260ms ease;
+  }
+  #caption.show { opacity: 1; transform: translateY(0) scale(1); }
+
+  /* ---------- Controls ---------- */
+  #controls {
+    position: relative;
+    z-index: 20;
+    display: flex; align-items: center; gap: 14px;
+    padding: 10px 16px;
+    background: var(--panel);
+    backdrop-filter: blur(6px);
+    border-top: 1px solid rgba(255,255,255,0.08);
+  }
+  #playPause {
+    width: 42px; height: 42px; flex: none;
+    border-radius: 50%; border: none; cursor: pointer;
+    background: linear-gradient(135deg, #ff2fd0, #7a5cff);
+    color: #fff; font-size: 1.1rem; display: flex; align-items: center; justify-content: center;
+  }
+  #seek { flex: 1; accent-color: #ff2fd0; }
+  #time { font-variant-numeric: tabular-nums; font-size: 0.78rem; opacity: 0.8; min-width: 8.5em; text-align: right; }
+  #lyricsToggle {
+    font: inherit; font-size: 0.75rem; letter-spacing: 0.05em; text-transform: uppercase;
+    background: transparent; color: #fff; border: 1px solid rgba(255,255,255,0.35);
+    border-radius: 999px; padding: 6px 14px; cursor: pointer; flex: none;
+  }
+  #lyricsToggle:hover { border-color: #ff2fd0; color: #ff2fd0; }
+
+  /* ---------- Full lyrics panel ---------- */
+  #lyricsPanel {
+    position: absolute; inset: 0;
+    background: rgba(6, 3, 16, 0.96);
+    z-index: 40;
+    overflow-y: auto;
+    padding: 8vh 8vw 14vh;
+    display: none;
+  }
+  #lyricsPanel.open { display: block; }
+  #lyricsPanel .line {
+    font-size: clamp(1rem, 2.4vw, 1.5rem);
+    padding: 6px 0; opacity: 0.4; transition: opacity 200ms, color 200ms;
+    cursor: pointer;
+  }
+  #lyricsPanel .line.current { opacity: 1; color: #ff2fd0; font-weight: 700; }
+  #lyricsPanel .section-head {
+    margin-top: 1.6em; font-size: 0.75rem; letter-spacing: 0.25em; text-transform: uppercase;
+    color: #3ad1ff; opacity: 0.8;
+  }
+
+  @media (max-width: 560px) {
+    #caption { max-width: 18ch; }
+    #controls { flex-wrap: wrap; row-gap: 8px; }
+    #seek { order: 3; flex-basis: 100%; }
+    #time { min-width: 0; font-size: 0.7rem; }
+    #lyricsToggle { padding: 6px 10px; font-size: 0.68rem; }
+  }
+</style>
+
+<div id="app">
+  <div id="stage">
+    <!-- scene SVGs injected here -->
+    <div class="grain"></div>
+    <div class="vignette"></div>
+    <div id="captionWrap">
+      <div id="section-badge"></div>
+      <div id="caption"></div>
+    </div>
+    <div id="lyricsPanel"></div>
+  </div>
+
+  <div id="controls">
+    <button id="playPause" aria-label="Play">▶</button>
+    <input id="seek" type="range" min="0" max="100" value="0" step="0.01" />
+    <div id="time">0:00 / 0:00</div>
+    <button id="lyricsToggle">Lyrics</button>
+  </div>
+
+  <audio id="audio" src="we-were-the-80s.mp3" preload="auto"></audio>
+
+  <div id="splash">
+    <h1>We Were the '80s</h1>
+    <p>A synthwave slideshow, synced to the lyrics. Turn your volume up and press play.</p>
+    <button id="playBtn">▶ Play</button>
+  </div>
+</div>
+
+<script>
+/* ===================== Lyrics data ===================== */
+const LYRICS = [{"section":"Intro","scene":"tv-static","accent":"#ff2fd0","text":"TV static","start":0.0,"end":1.12},{"section":"Intro","scene":"tv-static","accent":"#ff2fd0","text":"click","start":1.12,"end":1.913},{"section":"Intro","scene":"tv-static","accent":"#ff2fd0","text":"VCR whirring","start":1.913,"end":2.332},{"section":"Intro","scene":"tv-static","accent":"#ff2fd0","text":"rewind... rewind...","start":2.332,"end":3.475},{"section":"Intro","scene":"chorus-card","accent":"#ff2fd0","text":"We were the '80s","start":3.475,"end":5.435},{"section":"Intro","scene":"chorus-card","accent":"#ff2fd0","text":"We didn't know","start":5.435,"end":6.997},{"section":"Intro","scene":"chorus-card","accent":"#ff2fd0","text":"We thought that was just life","start":6.997,"end":10.1},{"section":"Verse 1","scene":"bigwheel-bmx","accent":"#ff7a1a","text":"Big Wheel rolling down the sidewalk","start":10.1,"end":12.875},{"section":"Verse 1","scene":"bigwheel-bmx","accent":"#ff7a1a","text":"Toughskins knees getting torn up","start":12.875,"end":15.231},{"section":"Verse 1","scene":"bigwheel-bmx","accent":"#ff7a1a","text":"Cinder blocks, two-by-four","start":15.231,"end":17.167},{"section":"Verse 1","scene":"bigwheel-bmx","accent":"#ff7a1a","text":"BMX flying off the homemade ramp","start":17.167,"end":20.246},{"section":"Verse 1","scene":"rabbit-ears-tv","accent":"#3ad1ff","text":"Rabbit ears on a thirteen-inch","start":20.246,"end":22.858},{"section":"Verse 1","scene":"rabbit-ears-tv","accent":"#3ad1ff","text":"Turn the dial until the picture came in","start":22.858,"end":26.964},{"section":"Verse 1","scene":"rabbit-ears-tv","accent":"#3ad1ff","text":"Trapper Keeper, number two","start":26.964,"end":28.923},{"section":"Verse 1","scene":"rabbit-ears-tv","accent":"#3ad1ff","text":"Teacher rolled the TV/VCR through","start":28.923,"end":31.465},{"section":"Verse 1","scene":"toy-room","accent":"#7a5cff","text":"Plastic army men across the floor","start":31.465,"end":34.591},{"section":"Verse 1","scene":"toy-room","accent":"#7a5cff","text":"Whole damn war behind my bedroom door","start":34.591,"end":38.113},{"section":"Verse 1","scene":"toy-room","accent":"#7a5cff","text":"Lite-Brite glowing in the dark","start":38.113,"end":40.585},{"section":"Verse 1","scene":"toy-room","accent":"#7a5cff","text":"Hot Wheels racing around the living room","start":40.585,"end":44.177},{"section":"Verse 1","scene":"cereal-arcade","accent":"#ffcf3a","text":"Cereal prize before the milk","start":44.177,"end":46.673},{"section":"Verse 1","scene":"cereal-arcade","accent":"#ffcf3a","text":"Pac-Man box, that was the real thrill","start":46.673,"end":50.242},{"section":"Verse 1","scene":"cereal-arcade","accent":"#ffcf3a","text":"Red Rover, fly-up, tag","start":50.242,"end":52.388},{"section":"Verse 1","scene":"cereal-arcade","accent":"#ffcf3a","text":"Be home before the streetlights flash","start":52.388,"end":55.28},{"section":"Pre-Chorus","scene":"no-tech-street","accent":"#3ad1ff","text":"No GPS, no group chat","start":55.28,"end":57.869},{"section":"Pre-Chorus","scene":"no-tech-street","accent":"#3ad1ff","text":"If you wanted somebody, you had to go find 'em","start":57.869,"end":62.954},{"section":"Pre-Chorus","scene":"no-tech-street","accent":"#3ad1ff","text":"No streaming, no algorithm","start":62.954,"end":64.937},{"section":"Pre-Chorus","scene":"no-tech-street","accent":"#3ad1ff","text":"Waited by the radio hoping they'd play it","start":64.937,"end":69.205},{"section":"Pre-Chorus","scene":"boombox-record","accent":"#ff2fd0","text":"Click","start":69.205,"end":69.742},{"section":"Pre-Chorus","scene":"boombox-record","accent":"#ff2fd0","text":"Press record","start":69.742,"end":70.791},{"section":"Pre-Chorus","scene":"boombox-record","accent":"#ff2fd0","text":"Don't talk","start":70.791,"end":71.771},{"section":"Pre-Chorus","scene":"boombox-record","accent":"#ff2fd0","text":"Don't breathe","start":71.771,"end":72.727},{"section":"Pre-Chorus","scene":"boombox-record","accent":"#ff2fd0","text":"You'd ruin the whole damn thing","start":72.727,"end":75.853},{"section":"Chorus","scene":"chorus-card","accent":"#ff2fd0","text":"We were the '80s","start":75.853,"end":78.022},{"section":"Chorus","scene":"chorus-card","accent":"#ff2fd0","text":"Acid wash and cassette tapes","start":78.022,"end":80.354},{"section":"Chorus","scene":"chorus-card","accent":"#ff2fd0","text":"We were the '80s","start":80.354,"end":82.524},{"section":"Chorus","scene":"chorus-card","accent":"#ff2fd0","text":"BMX and Saturday escapes","start":82.524,"end":84.46},{"section":"Chorus","scene":"chorus-card2","accent":"#ffcf3a","text":"Cereal prizes, video stores","start":84.46,"end":86.629},{"section":"Chorus","scene":"chorus-card2","accent":"#ffcf3a","text":"Friday nights spent at home","start":86.629,"end":89.311},{"section":"Chorus","scene":"chorus-card2","accent":"#ffcf3a","text":"We were the kids before the world went digital","start":89.311,"end":93.836},{"section":"Chorus","scene":"chorus-card2","accent":"#ffcf3a","text":"We were the '80s","start":93.836,"end":96.192},{"section":"Chorus","scene":"chorus-card2","accent":"#ffcf3a","text":"And we didn't know it yet","start":96.192,"end":98.944},{"section":"Post-Chorus","scene":"arcade-8bit","accent":"#3affa0","text":"8-bit glitch","start":98.944,"end":99.294},{"section":"Post-Chorus","scene":"arcade-8bit","accent":"#3affa0","text":"Mario! Mario!","start":99.294,"end":100.507},{"section":"Post-Chorus","scene":"arcade-8bit","accent":"#3affa0","text":"static","start":100.507,"end":101.09},{"section":"Post-Chorus","scene":"arcade-8bit","accent":"#3affa0","text":"Back to the Future","start":101.09,"end":103.236},{"section":"Post-Chorus","scene":"arcade-8bit","accent":"#3affa0","text":"rewind","start":103.236,"end":103.819},{"section":"Post-Chorus","scene":"arcade-8bit","accent":"#3affa0","text":"Be kind","start":103.819,"end":104.799},{"section":"Post-Chorus","scene":"arcade-8bit","accent":"#3affa0","text":"Be kind","start":104.799,"end":105.942},{"section":"Post-Chorus","scene":"arcade-8bit","accent":"#3affa0","text":"Be kind...","start":105.942,"end":106.525},{"section":"Verse 2","scene":"public-pool","accent":"#3ad1ff","text":"Bike tires humming down the street","start":106.525,"end":109.884},{"section":"Verse 2","scene":"public-pool","accent":"#3ad1ff","text":"Public pool and burning feet","start":109.884,"end":112.333},{"section":"Verse 2","scene":"public-pool","accent":"#3ad1ff","text":"Showing up for public swim","start":112.333,"end":114.945},{"section":"Verse 2","scene":"public-pool","accent":"#3ad1ff","text":"With chlorine hair and sunburned skin","start":114.945,"end":117.884},{"section":"Verse 2","scene":"public-pool2","accent":"#3ad1ff","text":"Race your friends across the pool","start":117.884,"end":120.8},{"section":"Verse 2","scene":"public-pool2","accent":"#3ad1ff","text":"No smartphone telling you what to do","start":120.8,"end":124.508},{"section":"Verse 2","scene":"public-pool2","accent":"#3ad1ff","text":"Ride back home when the daylight fades","start":124.508,"end":128.03},{"section":"Verse 2","scene":"public-pool2","accent":"#3ad1ff","text":"Nobody knew what games we played","start":128.03,"end":131.156},{"section":"Verse 2","scene":"action-figures","accent":"#ff7a1a","text":"G.I. Joe and Transformers","start":131.156,"end":133.115},{"section":"Verse 2","scene":"action-figures","accent":"#ff7a1a","text":"He-Man, ThunderCats, Saturday mornings","start":133.115,"end":135.238},{"section":"Verse 2","scene":"action-figures","accent":"#ff7a1a","text":"TMNT after school","start":135.238,"end":136.824},{"section":"Verse 2","scene":"action-figures","accent":"#ff7a1a","text":"Smurfs on Saturday, cartoons ruled","start":136.824,"end":139.366},{"section":"Verse 2","scene":"cartoon-tv","accent":"#7a5cff","text":"Looney Tunes and Scooby-Doo","start":139.366,"end":141.279},{"section":"Verse 2","scene":"cartoon-tv","accent":"#7a5cff","text":"Inspector Gadget coming through","start":141.279,"end":143.425},{"section":"Verse 2","scene":"cartoon-tv","accent":"#7a5cff","text":"DuckTales, Chipmunks on the screen","start":143.425,"end":145.967},{"section":"Verse 2","scene":"cartoon-tv","accent":"#7a5cff","text":"Every afternoon we watched TV","start":145.967,"end":148.51},{"section":"Pre-Chorus 2","scene":"radio-tower","accent":"#ff2fd0","text":"Michael on the radio","start":148.51,"end":150.446},{"section":"Pre-Chorus 2","scene":"radio-tower","accent":"#ff2fd0","text":"Bon Jovi playing loud and clear","start":150.446,"end":153.735},{"section":"Pre-Chorus 2","scene":"radio-tower","accent":"#ff2fd0","text":"Whitney singing from her soul","start":153.735,"end":156.277},{"section":"Pre-Chorus 2","scene":"radio-tower","accent":"#ff2fd0","text":"Huey Lewis coming through the receiver","start":156.277,"end":159.123},{"section":"Pre-Chorus 2","scene":"walkman-mixtape","accent":"#ffcf3a","text":"Cassette tape with covered tabs","start":159.123,"end":161.712},{"section":"Pre-Chorus 2","scene":"walkman-mixtape","accent":"#ffcf3a","text":"Recording songs from the radio","start":161.712,"end":164.231},{"section":"Pre-Chorus 2","scene":"walkman-mixtape","accent":"#ffcf3a","text":"Walkman batteries almost dead","start":164.231,"end":166.19},{"section":"Pre-Chorus 2","scene":"walkman-mixtape","accent":"#ffcf3a","text":"Mixtape to listen on the go","start":166.19,"end":169.269},{"section":"Chorus","scene":"chorus-card","accent":"#ff2fd0","text":"We were the '80s","start":169.269,"end":171.392},{"section":"Chorus","scene":"chorus-card","accent":"#ff2fd0","text":"Acid wash and cassette tapes","start":171.392,"end":173.934},{"section":"Chorus","scene":"chorus-card","accent":"#ff2fd0","text":"We were the '80s","start":173.934,"end":176.103},{"section":"Chorus","scene":"chorus-card","accent":"#ff2fd0","text":"BMX and Saturday escapes","start":176.103,"end":178.039},{"section":"Chorus","scene":"chorus-card2","accent":"#ffcf3a","text":"Cereal prizes, video stores","start":178.039,"end":180.185},{"section":"Chorus","scene":"chorus-card2","accent":"#ffcf3a","text":"Friday nights spent at home","start":180.185,"end":182.494},{"section":"Chorus","scene":"chorus-card2","accent":"#ffcf3a","text":"We were the kids before the world went digital","start":182.494,"end":187.159},{"section":"Chorus","scene":"chorus-card2","accent":"#ffcf3a","text":"We were the '80s","start":187.159,"end":188.909},{"section":"Chorus","scene":"chorus-card2","accent":"#ffcf3a","text":"And we didn't know it yet","start":188.909,"end":192.384},{"section":"Verse 3","scene":"atari-frogger","accent":"#3affa0","text":"Atari glowing on the TV","start":192.384,"end":194.693},{"section":"Verse 3","scene":"atari-frogger","accent":"#3affa0","text":"Frogger jumping, cars run over me","start":194.693,"end":197.842},{"section":"Verse 3","scene":"atari-frogger","accent":"#3affa0","text":"Then Nintendo changed the game","start":197.842,"end":200.804},{"section":"Verse 3","scene":"atari-frogger","accent":"#3affa0","text":"Mario, Zelda, games would never be the same","start":200.804,"end":204.42},{"section":"Verse 3","scene":"arcade-8bit2","accent":"#3affa0","text":"Mega Man and Excitebike","start":204.42,"end":206.565},{"section":"Verse 3","scene":"arcade-8bit2","accent":"#3affa0","text":"Contra and the Konami Code","start":206.565,"end":209.061},{"section":"Verse 3","scene":"arcade-8bit2","accent":"#3affa0","text":"Rubik's Cube and Slinky springs","start":209.061,"end":211.58},{"section":"Verse 3","scene":"arcade-8bit2","accent":"#3affa0","text":"Etch A Sketch drew so many things","start":211.58,"end":215.079},{"section":"Verse 3","scene":"book-pile","accent":"#ff7a1a","text":"Choose Your Own Adventure","start":215.079,"end":217.202},{"section":"Verse 3","scene":"book-pile","accent":"#ff7a1a","text":"Encyclopedia Brown","start":217.202,"end":218.181},{"section":"Verse 3","scene":"book-pile","accent":"#ff7a1a","text":"Hardy Boys and Where's Waldo?","start":218.181,"end":220.677},{"section":"Verse 3","scene":"book-pile","accent":"#ff7a1a","text":"Mad Libs, please give me a noun","start":220.677,"end":224.339},{"section":"Verse 3","scene":"oregon-trail","accent":"#3ad1ff","text":"Oregon Trail on the Apple screen","start":224.339,"end":227.465},{"section":"Verse 3","scene":"oregon-trail","accent":"#3ad1ff","text":"You have died of dysentery","start":227.465,"end":229.96},{"section":"Verse 3","scene":"oregon-trail","accent":"#3ad1ff","text":"No internet to tell you why","start":229.96,"end":233.039},{"section":"Verse 3","scene":"oregon-trail","accent":"#3ad1ff","text":"You just made up your own lie","start":233.039,"end":236.678},{"section":"Pre-Chorus 3","scene":"video-store","accent":"#7a5cff","text":"Video store on a Friday night","start":236.678,"end":239.617},{"section":"Pre-Chorus 3","scene":"video-store","accent":"#7a5cff","text":"Pick a movie, but please don't fight","start":239.617,"end":243.069},{"section":"Pre-Chorus 3","scene":"video-store","accent":"#7a5cff","text":"Get home, pop it in the VCR","start":243.069,"end":246.778},{"section":"Pre-Chorus 3","scene":"video-store","accent":"#7a5cff","text":"Make some popcorn, watch the star","start":246.778,"end":249.81},{"section":"Pre-Chorus 3","scene":"vhs-tape","accent":"#ff2fd0","text":"Be kind, rewind","start":249.81,"end":251.396},{"section":"Pre-Chorus 3","scene":"vhs-tape","accent":"#ff2fd0","text":"Return it on time","start":251.396,"end":253.519},{"section":"Pre-Chorus 3","scene":"vhs-tape","accent":"#ff2fd0","text":"No autoplay","start":253.519,"end":254.288},{"section":"Pre-Chorus 3","scene":"vhs-tape","accent":"#ff2fd0","text":"No endless line","start":254.288,"end":256.038},{"section":"Pre-Chorus 3","scene":"vhs-tape","accent":"#ff2fd0","text":"Just one movie","start":256.038,"end":257.367},{"section":"Pre-Chorus 3","scene":"vhs-tape","accent":"#ff2fd0","text":"For one night","start":257.367,"end":258.907},{"section":"Chorus","scene":"chorus-card","accent":"#ff2fd0","text":"We were the '80s","start":258.907,"end":260.796},{"section":"Chorus","scene":"chorus-card","accent":"#ff2fd0","text":"Acid wash and cassette tapes","start":260.796,"end":263.525},{"section":"Chorus","scene":"chorus-card","accent":"#ff2fd0","text":"We were the '80s","start":263.525,"end":265.624},{"section":"Chorus","scene":"chorus-card","accent":"#ff2fd0","text":"BMX and Saturday escapes","start":265.624,"end":267.7},{"section":"Chorus","scene":"chorus-card2","accent":"#ffcf3a","text":"Cereal prizes, video stores","start":267.7,"end":269.659},{"section":"Chorus","scene":"chorus-card2","accent":"#ffcf3a","text":"Friday nights behind those doors","start":269.659,"end":272.342},{"section":"Chorus","scene":"chorus-card2","accent":"#ffcf3a","text":"We were the kids before the world went digital","start":272.342,"end":276.54},{"section":"Chorus","scene":"chorus-card2","accent":"#ffcf3a","text":"We were the '80s","start":276.54,"end":278.873},{"section":"Chorus","scene":"chorus-card2","accent":"#ffcf3a","text":"And we didn't know it yet","start":278.873,"end":281.928},{"section":"Bridge","scene":"bike-street","accent":"#3ad1ff","text":"Maybe it wasn't about the toys","start":281.928,"end":284.984},{"section":"Bridge","scene":"bike-street","accent":"#3ad1ff","text":"Maybe it was hanging with the boys","start":284.984,"end":288.413},{"section":"Bridge","scene":"bike-street","accent":"#3ad1ff","text":"Maybe it wasn't about the songs","start":288.413,"end":291.468},{"section":"Bridge","scene":"bike-street","accent":"#3ad1ff","text":"Or the Froggers, or the Pongs","start":291.468,"end":294.524},{"section":"Bridge","scene":"bike-street2","accent":"#3ad1ff","text":"Maybe it was being gone all day","start":294.524,"end":298.116},{"section":"Bridge","scene":"bike-street2","accent":"#3ad1ff","text":"Finding friends so you could play","start":298.116,"end":301.218},{"section":"Bridge","scene":"bike-street2","accent":"#3ad1ff","text":"Riding to your best friend's house","start":301.218,"end":304.25},{"section":"Bridge","scene":"bike-street2","accent":"#3ad1ff","text":"Sitting at his table and eating grouse","start":304.25,"end":307.889},{"section":"Bridge","scene":"no-notification","accent":"#7a5cff","text":"No notification","start":307.889,"end":308.822},{"section":"Bridge","scene":"no-notification","accent":"#7a5cff","text":"No location","start":308.822,"end":309.802},{"section":"Bridge","scene":"no-notification","accent":"#7a5cff","text":"No little blue dot telling everybody where you are","start":309.802,"end":314.583},{"section":"Bridge","scene":"summer-night","accent":"#ff7a1a","text":"Just a street","start":314.583,"end":316.053},{"section":"Bridge","scene":"summer-night","accent":"#ff7a1a","text":"A bike","start":316.053,"end":316.869},{"section":"Bridge","scene":"summer-night","accent":"#ff7a1a","text":"A public pool","start":316.869,"end":318.572},{"section":"Bridge","scene":"summer-night","accent":"#ff7a1a","text":"A summer night","start":318.572,"end":320.111},{"section":"Bridge","scene":"summer-night2","accent":"#ff7a1a","text":"And if somebody needed you","start":320.111,"end":322.584},{"section":"Bridge","scene":"summer-night2","accent":"#ff7a1a","text":"They knew where you lived","start":322.584,"end":325.033},{"section":"Breakdown","scene":"tv-static","accent":"#ff2fd0","text":"telephone dial tone","start":325.033,"end":325.826},{"section":"Breakdown","scene":"tv-static","accent":"#ff2fd0","text":"VHS tracking","start":325.826,"end":326.409},{"section":"Breakdown","scene":"tv-static","accent":"#ff2fd0","text":"radio static","start":326.409,"end":326.945},{"section":"Breakdown","scene":"movie-card","accent":"#ffcf3a","text":"E.T.","start":326.945,"end":327.552},{"section":"Breakdown","scene":"movie-card","accent":"#ffcf3a","text":"Goonies","start":327.552,"end":328.112},{"section":"Breakdown","scene":"movie-card","accent":"#ffcf3a","text":"Karate Kid","start":328.112,"end":329.231},{"section":"Breakdown","scene":"movie-card","accent":"#ffcf3a","text":"NeverEnding Story","start":329.231,"end":330.234},{"section":"Breakdown","scene":"movie-card","accent":"#ff7a1a","text":"Gremlins","start":330.234,"end":330.771},{"section":"Breakdown","scene":"movie-card","accent":"#ff7a1a","text":"Flight of the Navigator","start":330.771,"end":332.893},{"section":"Breakdown","scene":"movie-card","accent":"#ff7a1a","text":"Princess Bride","start":332.893,"end":333.85},{"section":"Breakdown","scene":"movie-card","accent":"#ff7a1a","text":"Stand by Me","start":333.85,"end":335.552},{"section":"Breakdown","scene":"movie-card","accent":"#3affa0","text":"Return of the Jedi","start":335.552,"end":337.488},{"section":"Breakdown","scene":"movie-card","accent":"#3affa0","text":"Top Gun","start":337.488,"end":338.468},{"section":"Breakdown","scene":"movie-card","accent":"#3affa0","text":"Terminator","start":338.468,"end":339.028},{"section":"Breakdown","scene":"movie-card","accent":"#3ad1ff","text":"Knight Rider","start":339.028,"end":340.147},{"section":"Breakdown","scene":"movie-card","accent":"#3ad1ff","text":"A-Team","start":340.147,"end":340.73},{"section":"Breakdown","scene":"movie-card","accent":"#3ad1ff","text":"MacGyver","start":340.73,"end":341.104},{"section":"Breakdown","scene":"movie-card","accent":"#3ad1ff","text":"Dukes of Hazzard","start":341.104,"end":342.993},{"section":"Breakdown","scene":"movie-card","accent":"#7a5cff","text":"ALF","start":342.993,"end":343.413},{"section":"Breakdown","scene":"movie-card","accent":"#7a5cff","text":"Full House","start":343.413,"end":344.369},{"section":"Breakdown","scene":"movie-card","accent":"#7a5cff","text":"Who's the Boss?","start":344.369,"end":346.072},{"section":"Breakdown","scene":"movie-card","accent":"#7a5cff","text":"Punky Brewster","start":346.072,"end":347.238},{"section":"Breakdown","scene":"movie-card","accent":"#7a5cff","text":"21 Jump Street","start":347.238,"end":348.334},{"section":"Breakdown","scene":"music-card","accent":"#ff2fd0","text":"Michael Jackson","start":348.334,"end":349.897},{"section":"Breakdown","scene":"music-card","accent":"#ff2fd0","text":"Whitney Houston","start":349.897,"end":350.434},{"section":"Breakdown","scene":"music-card","accent":"#ff2fd0","text":"Bon Jovi","start":350.434,"end":351.716},{"section":"Breakdown","scene":"music-card","accent":"#ff2fd0","text":"Def Leppard","start":351.716,"end":352.556},{"section":"Breakdown","scene":"music-card","accent":"#ff2fd0","text":"Foreigner","start":352.556,"end":353.326},{"section":"Breakdown","scene":"music-card","accent":"#ff2fd0","text":"INXS","start":353.326,"end":353.699},{"section":"Breakdown","scene":"music-card","accent":"#ffcf3a","text":"DJ Jazzy Jeff","start":353.699,"end":355.402},{"section":"Breakdown","scene":"music-card","accent":"#ffcf3a","text":"Fresh Prince","start":355.402,"end":356.381},{"section":"Breakdown","scene":"music-card","accent":"#ffcf3a","text":"We Are the World","start":356.381,"end":358.457},{"section":"Breakdown","scene":"tv-static","accent":"#ff2fd0","text":"static cuts out","start":358.457,"end":360.183},{"section":"Breakdown","scene":"chorus-card","accent":"#ff2fd0","text":"We were the '80s.","start":360.183,"end":362.096},{"section":"Final Chorus","scene":"chorus-card","accent":"#ff2fd0","text":"We were the '80s","start":362.096,"end":364.009},{"section":"Final Chorus","scene":"chorus-card","accent":"#ff2fd0","text":"Acid wash and cassette tapes","start":364.009,"end":366.691},{"section":"Final Chorus","scene":"chorus-card","accent":"#ff2fd0","text":"We were the '80s","start":366.691,"end":368.51},{"section":"Final Chorus","scene":"chorus-card","accent":"#ff2fd0","text":"BMX and Saturday escapes","start":368.51,"end":370.656},{"section":"Final Chorus","scene":"chorus-card2","accent":"#ffcf3a","text":"Cereal prizes, video stores","start":370.656,"end":372.756},{"section":"Final Chorus","scene":"chorus-card2","accent":"#ffcf3a","text":"Friday nights behind those doors","start":372.756,"end":375.205},{"section":"Final Chorus","scene":"chorus-card2","accent":"#ffcf3a","text":"We were the kids before the world went digital","start":375.205,"end":379.916},{"section":"Final Chorus","scene":"chorus-card2","accent":"#ffcf3a","text":"We were the '80s","start":379.916,"end":381.899},{"section":"Final Chorus","scene":"chorus-card2","accent":"#ffcf3a","text":"And we didn't know it yet","start":381.899,"end":384.931},{"section":"Final Breakdown","scene":"bigwheel-bmx","accent":"#ff7a1a","text":"Big Wheel down the sidewalk","start":384.931,"end":387.427},{"section":"Final Breakdown","scene":"bigwheel-bmx","accent":"#ff7a1a","text":"Bike tires humming through the heat","start":387.427,"end":390.622},{"section":"Final Breakdown","scene":"bigwheel-bmx","accent":"#ff7a1a","text":"Public pool and chlorine hair","start":390.622,"end":393.002},{"section":"Final Breakdown","scene":"bigwheel-bmx","accent":"#ff7a1a","text":"Sunburn burning on our skin","start":393.002,"end":395.707},{"section":"Final Breakdown","scene":"montage","accent":"#3ad1ff","text":"Toughskins, tube socks","start":395.707,"end":397.06},{"section":"Final Breakdown","scene":"montage","accent":"#3ad1ff","text":"Cereal prizes, BMX ramps","start":397.06,"end":399.369},{"section":"Final Breakdown","scene":"montage","accent":"#3ad1ff","text":"Jolly Ranchers, Bubble Tape","start":399.369,"end":401.119},{"section":"Final Breakdown","scene":"montage","accent":"#3ad1ff","text":"Riding home before the streetlights","start":401.119,"end":403.871},{"section":"Outro","scene":"vhs-tape","accent":"#ff2fd0","text":"VHS rewind","start":403.871,"end":404.851},{"section":"Outro","scene":"vhs-tape","accent":"#ff2fd0","text":"click","start":404.851,"end":405.132},{"section":"Outro","scene":"tv-static","accent":"#7a5cff","text":"Be kind...","start":405.132,"end":406.413},{"section":"Outro","scene":"tv-static","accent":"#7a5cff","text":"static","start":406.413,"end":407.206},{"section":"Outro","scene":"tv-static","accent":"#7a5cff","text":"Rewind...","start":407.206,"end":407.603},{"section":"Outro","scene":"chorus-card","accent":"#ff2fd0","text":"8-bit melody","start":407.603,"end":408.559},{"section":"Outro","scene":"chorus-card","accent":"#ff2fd0","text":"We were the '80s.","start":408.559,"end":408.839}];
+
+/* ===================== Icon library ===================== */
+/* Each icon is inner SVG markup drawn in a 240x240 box, stroke=currentColor. */
+const ICONS = {
+  "tv-static": `
+    <rect x="30" y="60" width="180" height="120" rx="14"/>
+    <path d="M70 60 L100 20 M170 60 L140 20"/>
+    <path d="M55 95 L88 135 L108 100 L138 145 L163 105 L185 150" stroke-width="7"/>
+    <path d="M40 200 L200 200"/>`,
+  "chorus-card": `
+    <path d="M50 90 Q120 20 190 90"/>
+    <rect x="30" y="90" width="180" height="90" rx="10"/>
+    <circle cx="75" cy="135" r="30"/><circle cx="165" cy="135" r="30"/>
+    <circle cx="75" cy="135" r="9" fill="currentColor"/><circle cx="165" cy="135" r="9" fill="currentColor"/>
+    <circle cx="120" cy="108" r="6" fill="currentColor"/>`,
+  "chorus-card2": `
+    <rect x="30" y="60" width="180" height="120" rx="14"/>
+    <circle cx="85" cy="118" r="28"/><circle cx="155" cy="118" r="28"/>
+    <circle cx="85" cy="118" r="7" fill="currentColor"/><circle cx="155" cy="118" r="7" fill="currentColor"/>
+    <rect x="88" y="150" width="64" height="14" rx="4"/>
+    <path d="M50 170 L190 170"/>`,
+  "bigwheel-bmx": `
+    <circle cx="68" cy="172" r="38"/><circle cx="172" cy="172" r="38"/>
+    <path d="M68 172 L118 96 L172 172 M118 96 L102 58 M130 172 L172 172"/>
+    <path d="M150 172 L172 140"/>`,
+  "rabbit-ears-tv": `
+    <rect x="40" y="70" width="160" height="110" rx="12"/>
+    <path d="M92 70 L58 20 M148 70 L182 20"/>
+    <circle cx="190" cy="125" r="9"/>
+    <path d="M65 100 L135 100 M65 125 L135 125 M65 150 L115 150"/>`,
+  "toy-room": `
+    <rect x="80" y="58" width="80" height="66" rx="10"/>
+    <circle cx="104" cy="88" r="7" fill="currentColor"/><circle cx="136" cy="88" r="7" fill="currentColor"/>
+    <rect x="68" y="126" width="104" height="70" rx="10"/>
+    <path d="M68 148 L38 148 M172 148 L202 148"/>
+    <path d="M100 196 L100 218 M140 196 L140 218"/>
+    <circle cx="120" cy="38" r="9"/><path d="M120 47 L120 58"/>`,
+  "cereal-arcade": `
+    <rect x="58" y="150" width="124" height="42" rx="12"/>
+    <path d="M120 150 L120 86"/>
+    <circle cx="120" cy="76" r="24"/>
+    <circle cx="90" cy="171" r="10" fill="currentColor"/><circle cx="150" cy="171" r="10" fill="currentColor"/>`,
+  "no-tech-street": `
+    <path d="M120 220 L120 60"/>
+    <path d="M120 60 Q120 30 162 30"/>
+    <circle cx="166" cy="36" r="20" fill="currentColor" fill-opacity="0.25"/>
+    <circle cx="166" cy="36" r="20"/>
+    <path d="M92 220 L148 220"/>`,
+  "boombox-record": `
+    <path d="M50 90 Q120 20 190 90"/>
+    <rect x="30" y="90" width="180" height="90" rx="10"/>
+    <circle cx="75" cy="135" r="30"/><circle cx="165" cy="135" r="30"/>
+    <circle cx="75" cy="135" r="9" fill="currentColor"/><circle cx="165" cy="135" r="9" fill="currentColor"/>
+    <circle cx="120" cy="108" r="7" fill="currentColor"/>`,
+  "arcade-8bit": `
+    <rect x="50" y="50" width="34" height="34"/><rect x="103" y="50" width="34" height="34" fill="currentColor"/>
+    <rect x="156" y="50" width="34" height="34"/><rect x="50" y="103" width="34" height="34" fill="currentColor"/>
+    <rect x="103" y="103" width="34" height="34"/><rect x="156" y="103" width="34" height="34" fill="currentColor"/>
+    <rect x="50" y="156" width="34" height="34" fill="currentColor"/><rect x="103" y="156" width="34" height="34"/>
+    <rect x="156" y="156" width="34" height="34" fill="currentColor"/>`,
+  "public-pool": `
+    <circle cx="185" cy="55" r="26"/>
+    <path d="M30 150 Q52 128 74 150 T118 150 T162 150 T206 150" stroke-width="7"/>
+    <path d="M30 182 Q52 160 74 182 T118 182 T162 182 T206 182" stroke-width="7"/>`,
+  "public-pool2": `
+    <path d="M30 140 L140 140 L140 112"/>
+    <circle cx="150" cy="100" r="14"/>
+    <path d="M30 190 Q52 168 74 190 T118 190 T162 190 T206 190" stroke-width="7"/>`,
+  "action-figures": `
+    <rect x="95" y="46" width="50" height="50" rx="8"/>
+    <path d="M120 96 L120 170"/>
+    <path d="M120 112 L68 90 M120 112 L172 90"/>
+    <path d="M120 170 L88 220 M120 170 L152 220"/>`,
+  "cartoon-tv": `
+    <rect x="30" y="60" width="180" height="120" rx="14"/>
+    <path d="M70 60 L100 20 M170 60 L140 20"/>
+    <path d="M120 92 L131 118 L159 118 L136 134 L145 160 L120 144 L95 160 L104 134 L81 118 L109 118 Z"/>
+    <path d="M40 200 L200 200"/>`,
+  "radio-tower": `
+    <path d="M120 220 L98 100 L142 100 Z"/>
+    <path d="M120 100 L120 58"/><circle cx="120" cy="52" r="7" fill="currentColor"/>
+    <path d="M152 88 Q172 68 152 48 M174 100 Q206 68 174 36"/>
+    <path d="M88 88 Q68 68 88 48 M66 100 Q34 68 66 36"/>`,
+  "walkman-mixtape": `
+    <rect x="70" y="92" width="100" height="86" rx="14"/>
+    <circle cx="120" cy="130" r="24"/><circle cx="120" cy="130" r="7" fill="currentColor"/>
+    <path d="M100 92 Q100 48 68 38 M140 92 Q140 48 172 38"/>
+    <circle cx="68" cy="40" r="15"/><circle cx="172" cy="40" r="15"/>`,
+  "atari-frogger": `
+    <rect x="58" y="150" width="124" height="42" rx="12"/>
+    <path d="M120 150 L120 86"/><circle cx="120" cy="76" r="24"/>
+    <ellipse cx="120" cy="196" rx="30" ry="18"/>
+    <circle cx="106" cy="182" r="7" fill="currentColor"/><circle cx="134" cy="182" r="7" fill="currentColor"/>`,
+  "arcade-8bit2": `
+    <rect x="55" y="55" width="130" height="130"/>
+    <path d="M98 55 L98 185 M142 55 L142 185 M55 98 L185 98 M55 142 L185 142"/>`,
+  "book-pile": `
+    <rect x="48" y="168" width="144" height="22" rx="4"/>
+    <rect x="58" y="146" width="124" height="22" rx="4"/>
+    <rect x="42" y="124" width="136" height="22" rx="4"/>`,
+  "oregon-trail": `
+    <path d="M56 172 Q120 96 184 172 Z"/>
+    <rect x="56" y="172" width="128" height="32" rx="6"/>
+    <circle cx="84" cy="210" r="18"/><circle cx="156" cy="210" r="18"/>`,
+  "video-store": `
+    <rect x="38" y="68" width="34" height="112" rx="4"/>
+    <rect x="80" y="68" width="34" height="112" rx="4"/>
+    <rect x="122" y="68" width="34" height="112" rx="4"/>
+    <rect x="164" y="68" width="34" height="112" rx="4"/>`,
+  "vhs-tape": `
+    <rect x="36" y="78" width="168" height="92" rx="10"/>
+    <circle cx="82" cy="124" r="22"/><circle cx="158" cy="124" r="22"/>
+    <circle cx="82" cy="124" r="6" fill="currentColor"/><circle cx="158" cy="124" r="6" fill="currentColor"/>
+    <path d="M60 154 L180 154"/>`,
+  "bike-street": `
+    <circle cx="68" cy="160" r="36"/><circle cx="172" cy="160" r="36"/>
+    <path d="M68 160 L118 84 L172 160 M118 84 L102 46 M130 160 L172 160"/>
+    <path d="M20 214 L220 214" stroke-dasharray="14 14"/>`,
+  "bike-street2": `
+    <circle cx="68" cy="160" r="36"/><circle cx="172" cy="160" r="36"/>
+    <path d="M68 160 L118 84 L172 160 M118 84 L102 46 M130 160 L172 160"/>
+    <path d="M20 214 L220 214" stroke-dasharray="14 14"/>`,
+  "no-notification": `
+    <rect x="85" y="38" width="70" height="140" rx="14"/>
+    <path d="M104 160 L136 160"/>
+    <path d="M36 200 L204 40" stroke-width="10"/>`,
+  "summer-night": `
+    <path d="M158 46 A44 44 0 1 0 158 134 A34 34 0 1 1 158 46 Z"/>
+    <path d="M66 220 L66 140 M66 140 Q34 118 14 128 M66 140 Q98 118 118 128 M66 152 Q42 122 28 100 M66 152 Q90 122 104 100"/>
+    <path d="M188 168 L191 176 L200 176 L193 182 L196 191 L188 185 L180 191 L183 182 L176 176 L185 176 Z"/>`,
+  "summer-night2": `
+    <path d="M56 194 L56 118 L120 68 L184 118 L184 194 Z"/>
+    <rect x="98" y="140" width="44" height="54"/>
+    <circle cx="156" cy="150" r="8" fill="currentColor"/>`,
+  "movie-card": `
+    <rect x="38" y="96" width="164" height="96" rx="10"/>
+    <rect x="34" y="60" width="172" height="30" rx="6" transform="rotate(-7 120 75)"/>
+    <path d="M60 62 L76 88 M96 60 L112 87 M132 58 L148 85 M168 57 L184 84" stroke-width="6"/>`,
+  "music-card": `
+    <circle cx="86" cy="172" r="22"/>
+    <path d="M108 172 L108 58 L166 46 L166 138"/>
+    <circle cx="144" cy="150" r="22"/>`,
+  "montage": `
+    <rect x="36" y="58" width="92" height="102" rx="6" transform="rotate(-9 82 109)"/>
+    <rect x="94" y="80" width="92" height="102" rx="6" transform="rotate(7 140 131)"/>
+    <rect x="66" y="102" width="92" height="102" rx="6" transform="rotate(-2 112 153)"/>`
+};
+
+/* ===================== Scene rendering ===================== */
+const SVG_NS = "http://www.w3.org/2000/svg";
+const stage = document.getElementById("stage");
+const sceneCache = {}; // "sceneId|accent" -> <svg> element (in DOM, hidden)
+
+function buildScene(sceneId, accent) {
+  const key = sceneId + "|" + accent;
+  if (sceneCache[key]) return sceneCache[key];
+
+  const svg = document.createElementNS(SVG_NS, "svg");
+  svg.classList.add("scene");
+  svg.setAttribute("viewBox", "0 0 1600 900");
+  svg.setAttribute("preserveAspectRatio", "xMidYMid slice");
+
+  const uid = "g" + Math.random().toString(36).slice(2, 9);
+
+  svg.innerHTML = `
+    <defs>
+      <linearGradient id="${uid}-sky" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="#170a2e"/>
+        <stop offset="55%" stop-color="#2a0f4d"/>
+        <stop offset="100%" stop-color="#050110"/>
+      </linearGradient>
+      <radialGradient id="${uid}-sun" cx="50%" cy="50%" r="50%">
+        <stop offset="0%" stop-color="${accent}" stop-opacity="0.95"/>
+        <stop offset="100%" stop-color="${accent}" stop-opacity="0"/>
+      </radialGradient>
+      <linearGradient id="${uid}-ground" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stop-color="${accent}" stop-opacity="0.35"/>
+        <stop offset="100%" stop-color="${accent}" stop-opacity="0"/>
+      </linearGradient>
+    </defs>
+    <rect width="1600" height="900" fill="url(#${uid}-sky)"/>
+    <circle cx="800" cy="560" r="420" fill="url(#${uid}-sun)"/>
+    <circle cx="800" cy="560" r="230" fill="none" stroke="${accent}" stroke-width="4" opacity="0.55"/>
+    ${starsMarkup()}
+    <rect x="0" y="560" width="1600" height="340" fill="url(#${uid}-ground)"/>
+    ${gridMarkup(accent)}
+    <g transform="translate(800 470) scale(2.35)" fill="none" stroke="${accent}"
+       stroke-width="9" stroke-linecap="round" stroke-linejoin="round"
+       style="filter: drop-shadow(0 0 18px ${accent})">
+      <g transform="translate(-120 -120)">${ICONS[sceneId] || ""}</g>
+    </g>
+  `;
+  stage.insertBefore(svg, document.getElementById("captionWrap"));
+  sceneCache[key] = svg;
+  return svg;
+}
+
+function starsMarkup() {
+  let s = "";
+  let seed = 42;
+  const rnd = () => { seed = (seed * 1103515245 + 12345) & 0x7fffffff; return (seed % 1000) / 1000; };
+  for (let i = 0; i < 60; i++) {
+    const x = rnd() * 1600, y = rnd() * 420, r = 1 + rnd() * 1.6, o = 0.25 + rnd() * 0.55;
+    s += `<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="${r.toFixed(1)}" fill="#fff" opacity="${o.toFixed(2)}"/>`;
+  }
+  return s;
+}
+
+function gridMarkup(accent) {
+  let s = "";
+  const horizon = 560, vpX = 800, bottom = 900;
+  for (let i = -14; i <= 14; i++) {
+    const xTop = vpX + i * 40;
+    const xBot = vpX + i * 240;
+    s += `<line x1="${xTop}" y1="${horizon}" x2="${xBot}" y2="${bottom}" stroke="${accent}" stroke-width="2" opacity="0.4"/>`;
+  }
+  for (let j = 0; j < 7; j++) {
+    const t = j / 6;
+    const y = horizon + (bottom - horizon) * (t * t);
+    s += `<line x1="0" y1="${y.toFixed(1)}" x2="1600" y2="${y.toFixed(1)}" stroke="${accent}" stroke-width="2" opacity="${(0.5 - t * 0.35).toFixed(2)}"/>`;
+  }
+  return s;
+}
+
+let activeScene = null;
+function showScene(sceneId, accent) {
+  const svg = buildScene(sceneId, accent);
+  if (svg === activeScene) return;
+  if (activeScene) activeScene.classList.remove("active");
+  svg.classList.add("active");
+  activeScene = svg;
+}
+
+/* ===================== Player logic ===================== */
+const audio = document.getElementById("audio");
+const caption = document.getElementById("caption");
+const sectionBadge = document.getElementById("section-badge");
+const playBtn = document.getElementById("playBtn");
+const splash = document.getElementById("splash");
+const playPause = document.getElementById("playPause");
+const seek = document.getElementById("seek");
+const timeEl = document.getElementById("time");
+const lyricsToggle = document.getElementById("lyricsToggle");
+const lyricsPanel = document.getElementById("lyricsPanel");
+
+function fmt(t) {
+  t = Math.max(0, t | 0);
+  const m = Math.floor(t / 60), s = t % 60;
+  return m + ":" + String(s).padStart(2, "0");
+}
+
+function findLineIndex(t) {
+  let lo = 0, hi = LYRICS.length - 1, ans = 0;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (LYRICS[mid].start <= t) { ans = mid; lo = mid + 1; }
+    else hi = mid - 1;
+  }
+  return ans;
+}
+
+let lastIdx = -1;
+function updateForTime(t) {
+  const idx = findLineIndex(t);
+  const line = LYRICS[idx];
+  if (idx !== lastIdx) {
+    lastIdx = idx;
+    showScene(line.scene, line.accent);
+    caption.style.color = line.accent;
+    caption.textContent = line.text;
+    sectionBadge.textContent = line.section;
+    caption.classList.remove("show");
+    void caption.offsetWidth;
+    caption.classList.add("show");
+    highlightPanelLine(idx);
+  }
+  if (!seekDragging) {
+    seek.value = t;
+    timeEl.textContent = fmt(t) + " / " + fmt(audio.duration || LYRICS[LYRICS.length - 1].end);
+  }
+}
+
+let raf = null;
+function tick() {
+  updateForTime(audio.currentTime);
+  raf = requestAnimationFrame(tick);
+}
+
+function start() {
+  splash.classList.add("hidden");
+  audio.play().then(() => {
+    playPause.textContent = "⏸";
+    if (!raf) raf = requestAnimationFrame(tick);
+  }).catch(() => {});
+}
+playBtn.addEventListener("click", start);
+
+playPause.addEventListener("click", () => {
+  if (audio.paused) {
+    audio.play();
+    playPause.textContent = "⏸";
+  } else {
+    audio.pause();
+    playPause.textContent = "▶";
+  }
+});
+
+audio.addEventListener("loadedmetadata", () => {
+  seek.max = audio.duration || LYRICS[LYRICS.length - 1].end;
+});
+audio.addEventListener("ended", () => {
+  playPause.textContent = "▶";
+  cancelAnimationFrame(raf); raf = null;
+});
+audio.addEventListener("pause", () => {
+  playPause.textContent = "▶";
+});
+audio.addEventListener("play", () => {
+  playPause.textContent = "⏸";
+  if (!raf) raf = requestAnimationFrame(tick);
+});
+
+let seekDragging = false;
+seek.addEventListener("input", () => {
+  seekDragging = true;
+  timeEl.textContent = fmt(+seek.value) + " / " + fmt(audio.duration || LYRICS[LYRICS.length - 1].end);
+});
+seek.addEventListener("change", () => {
+  audio.currentTime = +seek.value;
+  seekDragging = false;
+});
+
+/* ---------- Full lyrics panel ---------- */
+const panelLineEls = [];
+(function buildPanel() {
+  let lastSection = null;
+  LYRICS.forEach((l, i) => {
+    if (l.section !== lastSection) {
+      lastSection = l.section;
+      const head = document.createElement("div");
+      head.className = "section-head";
+      head.textContent = l.section;
+      lyricsPanel.appendChild(head);
+    }
+    const div = document.createElement("div");
+    div.className = "line";
+    div.textContent = l.text;
+    div.addEventListener("click", () => {
+      audio.currentTime = l.start;
+      if (audio.paused) start();
+      lyricsPanel.classList.remove("open");
+    });
+    lyricsPanel.appendChild(div);
+    panelLineEls.push(div);
+  });
+})();
+function highlightPanelLine(idx) {
+  const prev = lyricsPanel.querySelector(".line.current");
+  if (prev) prev.classList.remove("current");
+  const el = panelLineEls[idx];
+  if (el) {
+    el.classList.add("current");
+    if (lyricsPanel.classList.contains("open")) {
+      el.scrollIntoView({ block: "center", behavior: "smooth" });
+    }
+  }
+}
+lyricsToggle.addEventListener("click", () => {
+  lyricsPanel.classList.toggle("open");
+});
+
+/* Prime first scene so it's ready before playback starts */
+updateForTime(0);
+</script>
